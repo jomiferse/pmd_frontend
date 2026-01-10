@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-fog text-ink;
+  background-image: radial-gradient(circle at 20% 10%, rgba(185, 242, 124, 0.35), transparent 45%),
+    radial-gradient(circle at 80% 20%, rgba(255, 179, 71, 0.25), transparent 40%);
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(185, 242, 124, 0.6);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.7s ease both;
+}
