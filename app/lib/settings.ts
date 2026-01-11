@@ -40,6 +40,7 @@ export type SettingsResponse = {
   user_id: string;
   user: {
     copilot_enabled: boolean;
+    developer_mode?: boolean | null;
   };
   preferences: UserAlertPreferences;
   effective: EffectiveUserSettings;
@@ -48,6 +49,7 @@ export type SettingsResponse = {
 
 export type SettingsPatch = Partial<UserAlertPreferences> & {
   copilot_enabled?: boolean | null;
+  developer_mode?: boolean | null;
 };
 
 export type EntitlementLimit<T> = {

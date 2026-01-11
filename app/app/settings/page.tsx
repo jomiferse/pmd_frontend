@@ -594,12 +594,24 @@ export default function SettingsPage() {
               API keys are optional and intended for integrations or scripts.
             </p>
           </div>
-          <Link
-            href="/app/settings/api-access"
-            className="rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-semibold text-ink shadow-soft transition hover:border-ink hover:text-ink"
-          >
-            Open API Access
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => toggleBoolean(setForm, setFieldErrors, "developer_mode")}
+              disabled={!isEditable}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                form.developer_mode ? "bg-ink text-white" : "bg-slate/10 text-slate"
+              } ${!isEditable ? "cursor-not-allowed opacity-60" : ""}`}
+            >
+              {form.developer_mode ? "Developer mode on" : "Developer mode off"}
+            </button>
+            <Link
+              href="/app/settings/api-access"
+              className="rounded-full border border-ink/10 bg-white px-4 py-2 text-sm font-semibold text-ink shadow-soft transition hover:border-ink hover:text-ink"
+            >
+              Open API Access
+            </Link>
+          </div>
         </div>
       </MagicCard>
     </section>
@@ -733,7 +745,8 @@ function buildForm(settings: SettingsResponse) {
     fast_window_minutes: formatFieldValue("fast_window_minutes", effective.fast_window_minutes),
     fast_max_themes_per_digest: formatFieldValue("fast_max_themes_per_digest", effective.fast_max_themes_per_digest),
     fast_max_markets_per_theme: formatFieldValue("fast_max_markets_per_theme", effective.fast_max_markets_per_theme),
-    copilot_enabled: formatFieldValue("copilot_enabled", settings.user?.copilot_enabled ?? false)
+    copilot_enabled: formatFieldValue("copilot_enabled", settings.user?.copilot_enabled ?? false),
+    developer_mode: Boolean(settings.user?.developer_mode)
   };
 }
 
@@ -860,6 +873,9 @@ function buildPatch(
     form.copilot_enabled !== settings.user.copilot_enabled
   ) {
     patch.copilot_enabled = Boolean(form.copilot_enabled);
+  }
+  if (typeof form.developer_mode === "boolean" && form.developer_mode !== settings.user.developer_mode) {
+    patch.developer_mode = Boolean(form.developer_mode);
   }
   const allowedStrengths = new Set(limits?.alert_strengths.allowed_values || effective.allowed_strengths || []);
   const strengths = Array.from(new Set((form.alert_strengths as string[]) || []))

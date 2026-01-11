@@ -4,6 +4,7 @@ export type AlertItem = {
   market_id: string;
   title: string;
   category: string;
+  signal_type: string;
   move: number;
   delta_pct: number;
   market_p_yes: number;
@@ -33,6 +34,8 @@ export type CopilotRun = {
   created_at: string;
   mode: string;
   window_minutes: number;
+  digest_window_minutes?: number | null;
+  window?: number | null;
   caps_remaining_day: number;
   caps_remaining_hour: number;
   daily_limit: number;
@@ -40,11 +43,22 @@ export type CopilotRun = {
   digest_limit: number;
   sent: number;
   themes_selected: number;
+  themes_total?: number;
+  themes_candidate?: number;
+  themes_eligible?: number;
+  daily_count?: number;
+  hourly_count?: number;
   skipped_by_reason_counts: Record<string, number>;
+  eligible_drop_reasons_counts?: Record<string, number>;
   llm_calls_attempted: number;
   llm_calls_succeeded: number;
   telegram_sends_attempted: number;
   telegram_sends_succeeded: number;
+  duration_ms?: number;
+  plan?: string | null;
+  selected?: number;
+  selected_count?: number;
+  sent_count?: number;
 };
 
 export type MeResponse = {
