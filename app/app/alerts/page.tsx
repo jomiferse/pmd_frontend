@@ -879,8 +879,15 @@ function AlertsPageContent() {
       const hasStoredState = groupedBuckets.some((bucket) =>
         Object.prototype.hasOwnProperty.call(current, bucket.id)
       );
-      if (hasStoredState) return current;
       const next = { ...current };
+      if (hasStoredState) {
+        groupedBuckets.forEach((bucket) => {
+          if (!Object.prototype.hasOwnProperty.call(current, bucket.id)) {
+            next[bucket.id] = true;
+          }
+        });
+        return next;
+      }
       groupedBuckets.forEach((bucket, index) => {
         if (index >= 2) {
           next[bucket.id] = true;
