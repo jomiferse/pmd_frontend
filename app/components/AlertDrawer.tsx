@@ -192,7 +192,7 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
     : "";
   const isYesNo = historyMeta?.is_yesno ?? null;
   const hasNoSeries = chartData.some((point) => point.p_no !== null && point.p_no !== undefined);
-  const noToggleDisabled = isYesNo === false || !hasNoSeries;
+  const noLineUnavailable = isYesNo === false || !hasNoSeries;
 
   const copyToClipboard = (text: string) => {
     if (navigator.clipboard?.writeText) {
@@ -263,11 +263,10 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
                 <button
                   type="button"
                   onClick={() => setShowNoLine((value) => !value)}
-                  disabled={noToggleDisabled}
                   aria-pressed={showNoLine}
                   className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
-                    showNoLine ? "border-ink bg-ink text-white" : "border-slate/30 text-slate"
-                  } ${noToggleDisabled ? "cursor-not-allowed opacity-40" : "hover:text-ink"}`}
+                    showNoLine ? "border-ink bg-ink text-white" : "border-slate/30 text-slate hover:text-ink"
+                  }`}
                 >
                   NO line
                 </button>
@@ -278,11 +277,11 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
                 <span className="h-2 w-2 rounded-full bg-ink" />
                 YES
               </span>
-              <span className={`flex items-center gap-1 ${noToggleDisabled ? "opacity-40" : ""}`}>
+              <span className={`flex items-center gap-1 ${noLineUnavailable ? "opacity-40" : ""}`}>
                 <span className="h-2 w-2 rounded-full bg-slate-500" />
                 NO
               </span>
-              {noToggleDisabled && (
+              {noLineUnavailable && (
                 <span>NO line available only for yes/no markets with stored p_no.</span>
               )}
             </div>
@@ -342,7 +341,7 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
                         strokeWidth={2}
                         dot={false}
                         isAnimationActive={false}
-                        hide={noToggleDisabled || !showNoLine}
+                        hide={noLineUnavailable || !showNoLine}
                       />
                     </LineChart>
                   </ResponsiveContainer>
