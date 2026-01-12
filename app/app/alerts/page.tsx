@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AlertDrawer from "../../components/AlertDrawer";
 import EmptyState from "../../components/EmptyState";
@@ -142,7 +142,7 @@ function saveAlertState(stateMap: Record<string, AlertState>) {
   }
 }
 
-export default function AlertsPage() {
+function AlertsPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -278,9 +278,9 @@ export default function AlertsPage() {
           }
 
           const data = result.data;
-          const items = Array.isArray(data) ? data : data.items || [];
-          const next = Array.isArray(data) ? null : data.next_cursor ?? null;
-          const total = Array.isArray(data) ? null : data.total ?? null;
+          const items = Array.isArray(data) ? data : data?.items ?? [];
+          const next = Array.isArray(data) ? null : data?.next_cursor ?? null;
+          const total = Array.isArray(data) ? null : data?.total ?? null;
           const matchedNewItems = items.filter(matchesAlertFilters).length;
 
           setAlerts((current) => {
@@ -1519,6 +1519,14 @@ export default function AlertsPage() {
         </div>
       )}
     </section>
+  );
+}
+
+export default function AlertsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <AlertsPageContent />
+    </Suspense>
   );
 }
 

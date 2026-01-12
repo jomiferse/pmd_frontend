@@ -713,7 +713,7 @@ const SETTINGS_FIELDS = {
 
 type SettingsFieldKey = keyof typeof SETTINGS_FIELDS;
 
-const NUMBER_FIELDS: Array<keyof SettingsPatch> = [
+const NUMBER_FIELDS: Array<keyof UserAlertPreferences> = [
   "min_liquidity",
   "min_volume_24h",
   "min_abs_price_move",
@@ -853,7 +853,8 @@ function buildPatch(
   settings: SettingsResponse,
   entitlements: SettingsEntitlements | null
 ): SettingsPatch {
-  const patch: SettingsPatch = {};
+  const patch: Partial<UserAlertPreferences> = {};
+  const extras: Pick<SettingsPatch, "copilot_enabled" | "developer_mode"> = {};
   const effective = getEffectiveSafe(settings);
   const features = entitlements?.features;
   const limits = entitlements?.limits;
@@ -861,7 +862,7 @@ function buildPatch(
     const parsed = parseFieldValue(field as SettingsFieldKey, form[field]);
     const current = effective[field as keyof EffectiveUserSettings];
     if (typeof parsed === "number" && parsed !== current) {
-      patch[field] = parsed;
+      (patch as Record<keyof UserAlertPreferences, number | null | undefined>)[field] = parsed;
     }
   });
   if (features?.fast_signals_enabled && form.fast_signals_enabled !== effective.fast_signals_enabled) {
@@ -872,10 +873,10 @@ function buildPatch(
     typeof form.copilot_enabled === "boolean" &&
     form.copilot_enabled !== settings.user.copilot_enabled
   ) {
-    patch.copilot_enabled = Boolean(form.copilot_enabled);
+    extras.copilot_enabled = Boolean(form.copilot_enabled);
   }
   if (typeof form.developer_mode === "boolean" && form.developer_mode !== settings.user.developer_mode) {
-    patch.developer_mode = Boolean(form.developer_mode);
+    extras.developer_mode = Boolean(form.developer_mode);
   }
   const allowedStrengths = new Set(limits?.alert_strengths.allowed_values || effective.allowed_strengths || []);
   const strengths = Array.from(new Set((form.alert_strengths as string[]) || []))
@@ -886,7 +887,7 @@ function buildPatch(
   if (strengths.join(",") !== currentStrengths.join(",")) {
     patch.alert_strengths = strengths;
   }
-  return patch;
+  return { ...patch, ...extras };
 }
 
 function buildResetPatch(preferences: UserAlertPreferences | null | undefined): SettingsPatch {
@@ -936,7 +937,7 @@ function buildResetPatch(preferences: UserAlertPreferences | null | undefined): 
 function validateForm(form: Record<string, string | boolean | string[]>, entitlements: SettingsEntitlements | null) {
   const errors: Record<string, string> = {};
   const limits = entitlements?.limits;
-  const minFields = ["min_liquidity", "min_volume_24h", "min_abs_price_move"];
+  const minFields = ["min_liquidity", "min_volume_24h", "min_abs_price_move"] as const;
   minFields.forEach((field) => {
     const parsed = parseNumber(form[field]);
     if (parsed === null) {
@@ -944,7 +945,7 @@ function validateForm(form: Record<string, string | boolean | string[]>, entitle
     } else if (parsed < 0) {
       errors[field] = "Must be positive.";
     } else {
-      const limit = limits?.[field as keyof SettingsEntitlements["limits"]];
+      const limit = limits?.[field];
       if (limit?.min !== null && limit?.min !== undefined && parsed < limit.min) {
         errors[field] = `Must be >= ${limit.min}.`;
       }
@@ -970,26 +971,26 @@ function validateForm(form: Record<string, string | boolean | string[]>, entitle
     "max_markets_per_theme",
     "fast_max_themes_per_digest",
     "fast_max_markets_per_theme"
-  ];
+  ] as const;
   nonNegativeFields.forEach((field) => {
     const parsed = parseNumber(form[field]);
     if (parsed === null || parsed < 0) {
       errors[field] = "Must be zero or greater.";
     } else {
-      const limit = limits?.[field as keyof SettingsEntitlements["limits"]];
+      const limit = limits?.[field];
       const limitMax = limit?.max ?? null;
       if (limitMax !== null && parsed > limitMax) {
         errors[field] = `Must be <= ${limitMax}.`;
       }
     }
   });
-  const positiveFields = ["fast_window_minutes", "digest_window_minutes"];
+  const positiveFields = ["fast_window_minutes", "digest_window_minutes"] as const;
   positiveFields.forEach((field) => {
     const parsed = parseNumber(form[field]);
     if (parsed === null || parsed <= 0) {
       errors[field] = "Must be greater than zero.";
     } else {
-      const limit = limits?.[field as keyof SettingsEntitlements["limits"]];
+      const limit = limits?.[field];
       const limitMin = limit?.min ?? null;
       if (limitMin !== null && parsed < limitMin) {
         errors[field] = `Must be >= ${limitMin}.`;
