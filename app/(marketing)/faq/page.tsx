@@ -2,6 +2,16 @@ import MagicAccordion from "../../components/magicui/MagicAccordion";
 import MagicBadge from "../../components/magicui/MagicBadge";
 import MagicCard from "../../components/magicui/MagicCard";
 import Spotlight from "../../components/magicui/Spotlight";
+import JsonLd from "../../components/marketing/JsonLd";
+import { faqJsonLd } from "../../lib/seo/jsonLd";
+import { createPageMetadata } from "../../lib/seo/metadata";
+
+export const metadata = createPageMetadata({
+  title: "FAQ for PMD Polymarket alerts",
+  description:
+    "Answers about PMD analytics, Polymarket alerts, and prediction market signals. Read-only monitoring and not financial advice.",
+  path: "/faq"
+});
 
 const faqItems = [
   {
@@ -30,12 +40,24 @@ const faqItems = [
   {
     title: "What is the refund policy?",
     content: "Refunds are reviewed case by case. Reach out if you need help."
+  },
+  {
+    title: "Is this financial advice?",
+    content: "No. PMD provides analytics only and does not offer financial advice."
   }
 ];
 
 export default function FaqPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-8">
+      <JsonLd
+        data={faqJsonLd(
+          faqItems.map((item) => ({
+            question: item.title,
+            answer: item.content
+          }))
+        )}
+      />
       <div className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/70 p-8 text-center shadow-card backdrop-blur">
         <Spotlight className="-left-20 -top-20 opacity-70" size={360} />
         <div className="relative z-10 space-y-3">
