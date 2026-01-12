@@ -33,6 +33,7 @@ import {
 
 const storageKey = "alerts-filters-v1";
 const viewStorageKey = "alerts-view-v1";
+const groupCollapseStorageKey = "alerts-group-collapse-v1";
 const pageSize = 50;
 
 
@@ -78,7 +79,10 @@ function AlertsPageContent() {
   const [themeQuery, setThemeQuery] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
-  const [grouping, setGrouping] = useState<"none" | "date">("none");
+  const [grouping, setGrouping] = useState<
+    "none" | "date" | "theme" | "market" | "signal" | "strength"
+  >("none");
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [showBackToTop, setShowBackToTop] = useState(false);
   const themeRef = useRef<HTMLDivElement | null>(null);
   const [appliedServerFilters, setAppliedServerFilters] = useState(() => ({
@@ -328,10 +332,21 @@ function AlertsPageContent() {
       if (parsed.density === "compact") {
         setDensity("compact");
       }
-      if (parsed.grouping === "date") {
-        setGrouping("date");
+      if (
+        parsed.grouping === "date" ||
+        parsed.grouping === "theme" ||
+        parsed.grouping === "market" ||
+        parsed.grouping === "signal" ||
+        parsed.grouping === "strength" ||
+        parsed.grouping === "none"
+      ) {
+        setGrouping(parsed.grouping);
       }
-      if (parsed.stateFilter === "all" || parsed.stateFilter === "saved" || parsed.stateFilter === "dismissed") {
+      if (
+        parsed.stateFilter === "all" ||
+        parsed.stateFilter === "saved" ||
+        parsed.stateFilter === "dismissed"
+      ) {
         setStateFilter(parsed.stateFilter);
       }
     } catch (parseError) {
@@ -340,8 +355,23 @@ function AlertsPageContent() {
   }, []);
 
   useEffect(() => {
+    const raw = localStorage.getItem(groupCollapseStorageKey);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as Record<string, boolean>;
+      setCollapsedGroups(parsed || {});
+    } catch (parseError) {
+      // ignore storage errors
+    }
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem(viewStorageKey, JSON.stringify({ density, grouping, stateFilter }));
   }, [density, grouping, stateFilter]);
+
+  useEffect(() => {
+    localStorage.setItem(groupCollapseStorageKey, JSON.stringify(collapsedGroups));
+  }, [collapsedGroups]);
 
   useEffect(() => {
     setAlertState(loadAlertState());
@@ -711,58 +741,199 @@ function AlertsPageContent() {
     ? "rounded-full border border-ink px-2.5 py-1 text-[11px] font-semibold text-ink transition hover:bg-ink hover:text-white"
     : "rounded-full border border-ink px-3 py-1 text-xs font-semibold text-ink transition hover:bg-ink hover:text-white";
 
+  const timeframeLabel = useMemo(() => {
+    if (windowMinutes % (24 * 60) === 0) {
+      return `Window ${windowMinutes / (24 * 60)}d`;
+    }
+    if (windowMinutes % 60 === 0) {
+      return `Window ${windowMinutes / 60}h`;
+    }
+    return `Window ${windowMinutes}m`;
+  }, [windowMinutes]);
+
+  type GroupStats = {
+    count: number;
+    maxMove: number;
+    avgLiquidity: number | null;
+    timeframeLabel: string;
+  };
+
+  type GroupBucket = {
+    id: string;
+    label: string;
+    items: AlertItem[];
+    stats: GroupStats;
+  };
+
   type AlertRow =
-    | { type: "group"; id: string; label: string; count: number }
+    | { type: "group"; id: string; label: string; count: number; stats: GroupStats; collapsed: boolean }
     | { type: "alert"; id: string; alert: AlertItem };
+
+  const buildGroupStats = (items: AlertItem[]): GroupStats => {
+    let maxMove = 0;
+    let liquiditySum = 0;
+    let liquidityCount = 0;
+    for (const alert of items) {
+      maxMove = Math.max(maxMove, getMoveValue(alert));
+      if (alert.liquidity > 0) {
+        liquiditySum += alert.liquidity;
+        liquidityCount += 1;
+      }
+    }
+    return {
+      count: items.length,
+      maxMove,
+      avgLiquidity: liquidityCount > 0 ? liquiditySum / liquidityCount : null,
+      timeframeLabel
+    };
+  };
+
+  const groupedBuckets = useMemo(() => {
+    if (grouping === "none") return [] as GroupBucket[];
+
+    const makeBucket = (id: string, label: string, items: AlertItem[]): GroupBucket => ({
+      id,
+      label,
+      items,
+      stats: buildGroupStats(items)
+    });
+
+    if (grouping === "date") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+
+      const buckets = {
+        today: [] as AlertItem[],
+        yesterday: [] as AlertItem[],
+        older: [] as AlertItem[]
+      };
+
+      for (const alert of filteredAlerts) {
+        const created = new Date(alert.created_at);
+        if (Number.isNaN(created.getTime())) {
+          buckets.older.push(alert);
+          continue;
+        }
+        if (created >= today) {
+          buckets.today.push(alert);
+        } else if (created >= yesterday) {
+          buckets.yesterday.push(alert);
+        } else {
+          buckets.older.push(alert);
+        }
+      }
+
+      const bucketRows: GroupBucket[] = [];
+      if (buckets.today.length) {
+        bucketRows.push(makeBucket("date:today", "Today", buckets.today));
+      }
+      if (buckets.yesterday.length) {
+        bucketRows.push(makeBucket("date:yesterday", "Yesterday", buckets.yesterday));
+      }
+      if (buckets.older.length) {
+        bucketRows.push(makeBucket("date:older", "Older", buckets.older));
+      }
+      return bucketRows;
+    }
+
+    const groups = new Map<string, { label: string; items: AlertItem[] }>();
+    const normalizeLabel = (value: string | null | undefined, fallback: string) => {
+      const trimmed = (value || "").trim();
+      return trimmed ? trimmed : fallback;
+    };
+
+    for (const alert of filteredAlerts) {
+      let groupKey = "";
+      let groupLabel = "";
+
+      if (grouping === "theme") {
+        groupLabel = normalizeLabel(alert.category, "Uncategorized");
+        groupKey = groupLabel.toLowerCase();
+      } else if (grouping === "market") {
+        groupLabel = alert.title || alert.market_slug || alert.market_id || "Unknown market";
+        groupKey = alert.market_id || alert.market_slug || alert.title || "unknown";
+      } else if (grouping === "signal") {
+        groupLabel = normalizeLabel(alert.signal_type, "Unknown signal");
+        groupKey = groupLabel.toLowerCase();
+      } else if (grouping === "strength") {
+        groupLabel = normalizeLabel(alert.strength || alert.confidence, "Unknown strength").toUpperCase();
+        groupKey = groupLabel;
+      }
+
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, { label: groupLabel, items: [] });
+      }
+      groups.get(groupKey)?.items.push(alert);
+    }
+
+    return Array.from(groups.entries()).map(([groupKey, group]) =>
+      makeBucket(`${grouping}:${groupKey}`, group.label, group.items)
+    );
+  }, [filteredAlerts, grouping, timeframeLabel]);
+
+  useEffect(() => {
+    if (grouping === "none" || groupedBuckets.length === 0) return;
+    setCollapsedGroups((current) => {
+      const hasStoredState = groupedBuckets.some((bucket) =>
+        Object.prototype.hasOwnProperty.call(current, bucket.id)
+      );
+      if (hasStoredState) return current;
+      const next = { ...current };
+      groupedBuckets.forEach((bucket, index) => {
+        if (index >= 2) {
+          next[bucket.id] = true;
+        }
+      });
+      return next;
+    });
+  }, [groupedBuckets, grouping]);
 
   const groupedRows = useMemo(() => {
     if (grouping === "none") {
       return filteredAlerts.map((alert) => ({
         type: "alert",
-        id: `alert-${alert.id}`,
+        id: `alert-${alert.id ?? `${alert.market_id}-${alert.created_at}`}`,
         alert
       })) as AlertRow[];
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-
-    const buckets = {
-      today: [] as AlertItem[],
-      yesterday: [] as AlertItem[],
-      older: [] as AlertItem[]
-    };
-
-    for (const alert of filteredAlerts) {
-      const created = new Date(alert.created_at);
-      if (Number.isNaN(created.getTime())) {
-        buckets.older.push(alert);
-        continue;
-      }
-      if (created >= today) {
-        buckets.today.push(alert);
-      } else if (created >= yesterday) {
-        buckets.yesterday.push(alert);
-      } else {
-        buckets.older.push(alert);
-      }
-    }
-
     const rows: AlertRow[] = [];
-    const pushGroup = (label: string, items: AlertItem[]) => {
-      if (!items.length) return;
-      rows.push({ type: "group", id: `group-${label.toLowerCase()}`, label, count: items.length });
-      items.forEach((alert) => rows.push({ type: "alert", id: `alert-${alert.id}`, alert }));
-    };
-
-    pushGroup("Today", buckets.today);
-    pushGroup("Yesterday", buckets.yesterday);
-    pushGroup("Older", buckets.older);
-
+    groupedBuckets.forEach((bucket) => {
+      const isCollapsed = Boolean(collapsedGroups[bucket.id]);
+      rows.push({
+        type: "group",
+        id: bucket.id,
+        label: bucket.label,
+        count: bucket.items.length,
+        stats: bucket.stats,
+        collapsed: isCollapsed
+      });
+      if (!isCollapsed) {
+        bucket.items.forEach((alert) =>
+          rows.push({
+            type: "alert",
+            id: `alert-${alert.id ?? `${alert.market_id}-${alert.created_at}`}`,
+            alert
+          })
+        );
+      }
+    });
     return rows;
-  }, [filteredAlerts, grouping]);
+  }, [collapsedGroups, filteredAlerts, groupedBuckets, grouping]);
+
+  const toggleGroupCollapse = useCallback((groupId: string) => {
+    setCollapsedGroups((current) => {
+      const next = { ...current };
+      if (next[groupId]) {
+        delete next[groupId];
+        return next;
+      }
+      next[groupId] = true;
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     const target = document.getElementById("alerts-load-more-sentinel");
@@ -855,27 +1026,25 @@ function AlertsPageContent() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span>Group</span>
-                  <div className="flex items-center rounded-full border border-slate/30 bg-white px-1 py-1">
-                    <button
-                      type="button"
-                      onClick={() => setGrouping("none")}
-                      className={`rounded-full px-3 py-1 transition ${
-                        grouping === "none" ? "bg-ink text-white" : "text-slate hover:text-ink"
-                      }`}
+                  <span>Group by</span>
+                  <span className="flex items-center rounded-full border border-slate/30 bg-white px-2 py-1">
+                    <select
+                      value={grouping}
+                      onChange={(event) =>
+                        setGrouping(
+                          event.target.value as "none" | "date" | "theme" | "market" | "signal" | "strength"
+                        )
+                      }
+                      className="bg-transparent text-[11px] text-ink outline-none"
                     >
-                      None
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setGrouping("date")}
-                      className={`rounded-full px-3 py-1 transition ${
-                        grouping === "date" ? "bg-ink text-white" : "text-slate hover:text-ink"
-                      }`}
-                    >
-                      Date
-                    </button>
-                  </div>
+                      <option value="none">None</option>
+                      <option value="date">Date</option>
+                      <option value="theme">Theme</option>
+                      <option value="market">Market</option>
+                      <option value="signal">Signal type</option>
+                      <option value="strength">Strength</option>
+                    </select>
+                  </span>
                 </div>
               </div>
             </div>
@@ -1274,10 +1443,30 @@ function AlertsPageContent() {
                   return (
                     <div
                       key={row.id}
-                      className="rounded-xl border border-white/70 bg-white/90 px-3 py-2 text-xs font-semibold text-slate"
+                      className="rounded-xl border border-white/70 bg-white/90 px-3 py-2"
                     >
-                      {row.label}
-                      <span className="ml-2 text-[11px] text-slate">({row.count})</span>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleGroupCollapse(row.id)}
+                          aria-expanded={!row.collapsed}
+                          className="flex items-center gap-2 text-left text-xs font-semibold text-slate"
+                        >
+                          <span className="text-[11px]">{row.collapsed ? ">" : "v"}</span>
+                          <span>{row.label}</span>
+                          <span className="text-[11px] text-slate">({row.count})</span>
+                        </button>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate">
+                          <span>Max move {formatPercent(row.stats.maxMove)}</span>
+                          <span>
+                            Avg liq{" "}
+                            {row.stats.avgLiquidity !== null
+                              ? formatNumber(row.stats.avgLiquidity)
+                              : "n/a"}
+                          </span>
+                          <span>{row.stats.timeframeLabel}</span>
+                        </div>
+                      </div>
                     </div>
                   );
                 }
