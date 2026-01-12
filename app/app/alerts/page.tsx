@@ -87,6 +87,19 @@ function AlertsPageContent() {
     themes: themes.slice(),
     copilot
   }));
+  const searchValue = useMemo(() => query.trim().toLowerCase(), [query]);
+  const strengthsLower = useMemo(() => new Set(strengths.map((item) => item.toLowerCase())), [strengths]);
+  const themesSet = useMemo(() => new Set(themes), [themes]);
+  const numericFilters = useMemo(
+    () => ({
+      minLiquidityValue: minLiquidity ? Number(minLiquidity) : null,
+      minVolumeValue: minVolume ? Number(minVolume) : null,
+      minMoveValue: minMove ? Number(minMove) : null,
+      pMinValue: pMin ? Number(pMin) : null,
+      pMaxValue: pMax ? Number(pMax) : null
+    }),
+    [minLiquidity, minMove, minVolume, pMax, pMin]
+  );
 
   const fastAvailable = entitlements?.features.fast_signals_enabled ?? true;
   const allowedStrengths = useMemo(() => {
@@ -403,12 +416,7 @@ function AlertsPageContent() {
 
   const matchesAlertFilters = useCallback(
     (alert: AlertItem) => {
-      const minLiquidityValue = minLiquidity ? Number(minLiquidity) : null;
-      const minVolumeValue = minVolume ? Number(minVolume) : null;
-      const minMoveValue = minMove ? Number(minMove) : null;
-      const pMinValue = pMin ? Number(pMin) : null;
-      const pMaxValue = pMax ? Number(pMax) : null;
-      const search = query.trim().toLowerCase();
+      const { minLiquidityValue, minVolumeValue, minMoveValue, pMinValue, pMaxValue } = numericFilters;
       const state = alertState[getAlertStateKey(alert)] || "pending";
       if (stateFilter === "saved" && state !== "saved") {
         return false;
@@ -420,10 +428,10 @@ function AlertsPageContent() {
         return false;
       }
       const strengthLabel = (alert.strength || alert.confidence || "").toLowerCase();
-      if (strengths.length && !strengths.map((item) => item.toLowerCase()).includes(strengthLabel)) {
+      if (strengthsLower.size > 0 && !strengthsLower.has(strengthLabel)) {
         return false;
       }
-      if (themes.length && !themes.includes(alert.category)) {
+      if (themesSet.size > 0 && !themesSet.has(alert.category)) {
         return false;
       }
       if (fastOnly && !isFastAlert(alert)) {
@@ -447,7 +455,7 @@ function AlertsPageContent() {
       if (pMaxValue !== null && alert.market_p_yes > pMaxValue) {
         return false;
       }
-      if (search) {
+      if (searchValue) {
         const haystack = [
           alert.title,
           alert.category,
@@ -459,25 +467,21 @@ function AlertsPageContent() {
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
-        if (!haystack.includes(search)) {
+        if (!haystack.includes(searchValue)) {
           return false;
         }
       }
       return true;
     },
     [
-      minLiquidity,
-      minVolume,
-      minMove,
-      pMin,
-      pMax,
-      query,
       alertState,
       stateFilter,
-      strengths,
-      themes,
       fastOnly,
-      actionableOnly
+      actionableOnly,
+      numericFilters,
+      searchValue,
+      strengthsLower,
+      themesSet
     ]
   );
 
