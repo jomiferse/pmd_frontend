@@ -11,6 +11,7 @@ import MagicInput from "../../components/magicui/MagicInput";
 import MagicNotice from "../../components/magicui/MagicNotice";
 import MagicSkeleton from "../../components/magicui/MagicSkeleton";
 import { apiClient } from "../../lib/apiClient";
+import { formatNumber, formatPercent, formatTimestamp } from "../../lib/formatters";
 import type { SettingsEntitlements } from "../../lib/settings";
 import type { AlertItem } from "../../lib/types";
 import { useSession } from "../../lib/useSession";
@@ -35,35 +36,6 @@ const sortOptions = [
   { value: "closest", label: "Closest to p=0.5" }
 ];
 
-const percentFormatter = new Intl.NumberFormat("en-US", {
-  style: "percent",
-  maximumFractionDigits: 1
-});
-const numberFormatter = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 2
-});
-
-function formatPercent(value?: number | null) {
-  if (value === null || value === undefined) return "n/a";
-  return percentFormatter.format(value);
-}
-
-function formatNumber(value?: number | null) {
-  if (value === null || value === undefined) return "n/a";
-  return numberFormatter.format(value);
-}
-
-function formatTimestamp(value?: string | null) {
-  if (!value) return "n/a";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(date);
-}
 function parseList(value: string | null) {
   if (!value) return [] as string[];
   return value

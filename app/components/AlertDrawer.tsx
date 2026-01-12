@@ -2,6 +2,7 @@
 
 import MagicBadge from "./magicui/MagicBadge";
 import MagicButton from "./magicui/MagicButton";
+import { formatNumber, formatPercent, formatTimestamp } from "../lib/formatters";
 import type { AlertItem } from "../lib/types";
 
 type Props = {
@@ -9,36 +10,6 @@ type Props = {
   windowMinutes: number;
   onClose: () => void;
 };
-
-const percentFormatter = new Intl.NumberFormat("en-US", {
-  style: "percent",
-  maximumFractionDigits: 1
-});
-const numberFormatter = new Intl.NumberFormat("en-US", {
-  maximumFractionDigits: 2
-});
-
-function formatPercent(value?: number | null) {
-  if (value === null || value === undefined) return "n/a";
-  return percentFormatter.format(value);
-}
-
-function formatNumber(value?: number | null) {
-  if (value === null || value === undefined) return "n/a";
-  return numberFormatter.format(value);
-}
-
-function formatTimestamp(value?: string | null) {
-  if (!value) return "n/a";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(date);
-}
 
 export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
   if (!alert) return null;
