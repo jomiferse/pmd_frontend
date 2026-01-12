@@ -16,6 +16,10 @@ Minimal operational UI for PMD.
 - Subscription flows use Stripe via `POST /billing/checkout-session`, `POST /billing/portal-session`, and `POST /webhooks/stripe`.
 - PMD still supports API-key access for dashboard data; set the API key in the UI (stored in localStorage).
 
+## Code structure
+- Shared formatting helpers live in `app/lib/formatters.ts`.
+- Alerts page utilities live in `app/app/alerts/alertUtils.ts`.
+
 ### Stripe backend env vars (FastAPI)
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
