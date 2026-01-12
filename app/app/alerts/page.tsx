@@ -68,6 +68,7 @@ function AlertsPageContent() {
   const [pMax, setPMax] = useState(searchParams.get("p_max") ?? "");
   const [sort, setSort] = useState(searchParams.get("sort") ?? "newest");
   const [customWindowMinutes, setCustomWindowMinutes] = useState(String(windowMinutes));
+  const [lastCustomWindowMinutes, setLastCustomWindowMinutes] = useState(String(windowMinutes));
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState<number | null>(null);
@@ -308,6 +309,7 @@ function AlertsPageContent() {
       setThemes(parsed.themes || []);
       setWindowMinutes(parsed.windowMinutes || 24 * 60);
       setCustomWindowMinutes(String(parsed.windowMinutes || 24 * 60));
+      setLastCustomWindowMinutes(String(parsed.windowMinutes || 24 * 60));
       setCopilot(parsed.copilot || "");
       setFastOnly(Boolean(parsed.fastOnly));
       setActionableOnly(Boolean(parsed.actionableOnly));
@@ -650,6 +652,7 @@ function AlertsPageContent() {
     setThemes(nextPayload.themes);
     setWindowMinutes(nextPayload.windowMinutes);
     setCustomWindowMinutes(String(nextPayload.windowMinutes));
+    setLastCustomWindowMinutes(String(nextPayload.windowMinutes));
     setCopilot(nextPayload.copilot);
     setFastOnly(nextPayload.fastOnly);
     setActionableOnly(nextPayload.actionableOnly);
@@ -1152,7 +1155,11 @@ function AlertsPageContent() {
                   onChange={(event) => {
                     const next = event.target.value;
                     if (next === "custom") {
-                      setCustomWindowMinutes(String(windowMinutes));
+                      const parsed = Number(lastCustomWindowMinutes);
+                      const resolved = Number.isFinite(parsed) && parsed > 0 ? parsed : windowMinutes;
+                      setWindowMinutes(resolved);
+                      setCustomWindowMinutes(String(resolved));
+                      setShowAdvanced(true);
                       return;
                     }
                     const preset = rangePresets.find((item) => item.id === next);
@@ -1380,6 +1387,7 @@ function AlertsPageContent() {
                     const parsed = Number(nextValue);
                     if (Number.isFinite(parsed) && parsed > 0) {
                       setWindowMinutes(parsed);
+                      setLastCustomWindowMinutes(String(parsed));
                     }
                   }}
                   className="w-full bg-transparent text-sm text-ink outline-none"
