@@ -7,6 +7,10 @@ Minimal operational UI for PMD.
 - Install dependencies: `npm install`
 - Run dev server: `npm run dev`
 
+## Favicons
+- Replace `public/logo.png` with the new source asset.
+- Regenerate assets with `npm run generate:favicons`.
+
 ## Docker
 - `docker compose up --build`
 - Open `http://localhost:3000`
