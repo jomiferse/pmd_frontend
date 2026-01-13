@@ -7,7 +7,7 @@ const ROOT = process.cwd();
 const inputPath = path.join(ROOT, "public", "logo.png");
 const outDir = path.join(ROOT, "public", "favicons");
 
-const paddingRatio = 0.12;
+const paddingRatio = 0.05;
 
 const pngOutputs = [
   { name: "favicon-16x16.png", size: 16 },
@@ -27,6 +27,7 @@ const ensureDir = async (dir) => {
 const buildPaddedPng = async (size) => {
   const contentSize = Math.max(1, Math.round(size * (1 - paddingRatio * 2)));
   const logo = await sharp(inputPath)
+    .trim({ threshold: 10 })
     .resize({ width: contentSize, height: contentSize, fit: "inside", withoutEnlargement: true })
     .png()
     .toBuffer();
