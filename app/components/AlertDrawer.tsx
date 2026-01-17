@@ -269,19 +269,6 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
             <p className="mt-1 text-xs text-slate">{formatTimestamp(alertTimestamp)}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <MagicButton
-              variant="primary"
-              size="sm"
-              onClick={() => window.open(alert.market_url, "_blank", "noopener,noreferrer")}
-            >
-              Open market
-            </MagicButton>
-            <MagicButton variant="secondary" size="sm" onClick={() => copyToClipboard(alert.market_url)}>
-              Copy link
-            </MagicButton>
-            <MagicButton variant="secondary" size="sm" onClick={() => copyToClipboard(summary)}>
-              Copy summary
-            </MagicButton>
             <MagicButton variant="ghost" size="sm" onClick={onClose}>
               Close
             </MagicButton>
