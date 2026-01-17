@@ -23,17 +23,12 @@ const nextConfig = {
       },
       {
         source: "/learn",
-        destination: `${marketingUrl}/learn`,
+        destination: `${marketingUrl}/faq`,
         permanent: true
       },
       {
         source: "/docs",
         destination: `${marketingUrl}/docs`,
-        permanent: true
-      },
-      {
-        source: "/blog",
-        destination: `${marketingUrl}/blog`,
         permanent: true
       }
     ];
