@@ -60,6 +60,21 @@ const historyRanges: { id: HistoryRange; label: string; minutes: number }[] = [
 
 const historyCache = new Map<string, HistoryPayload>();
 
+function formatOutcomeLabel(label: string | null | undefined) {
+  if (!label) return null;
+  const trimmed = label.trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.replace(/_/g, " ");
+  const isAllCaps = normalized === normalized.toUpperCase();
+  if (!isAllCaps) return normalized;
+  return normalized
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
   const [historyRange, setHistoryRange] = useState<HistoryRange>("24h");
   const [historyData, setHistoryData] = useState<HistoryPayload | null>(null);
@@ -165,8 +180,9 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
 
   const probability = formatProbability(alert);
   const isYesNoLabel = probability.label === "p_yes";
-  const probabilityHistoryLabel = isYesNoLabel ? "p_yes" : probability.label;
-  const probabilityLegendLabel = isYesNoLabel ? "YES" : probability.label;
+  const friendlyOutcome = formatOutcomeLabel(alert.primary_outcome_label) || (isYesNoLabel ? "Yes" : "Outcome");
+  const probabilityHeading = `${friendlyOutcome} implied probability`;
+  const probabilityLegendLabel = isYesNoLabel ? "YES" : friendlyOutcome;
   const priceBefore = alert.old_price ?? alert.prev_market_p_yes;
   const action = alert.suggested_action || "n/a";
   const strengthLabel = alert.strength || alert.confidence || "n/a";
@@ -194,12 +210,32 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
     alertMarkerTs !== null ? alertMarkerTs - windowMinutes * 60 * 1000 : null;
 
   const historyMeta = historyData?.meta;
-  const chartWindowLabel = historyMeta?.start_ts && historyMeta?.end_ts
-    ? `${formatTimestamp(historyMeta.start_ts)} - ${formatTimestamp(historyMeta.end_ts)}`
-    : "";
+  const historyRangeMinutes = historyRanges.find((range) => range.id === historyRange)?.minutes ?? null;
   const isYesNo = historyMeta?.is_yesno ?? null;
+  const isYesNoMarket = isYesNoLabel && isYesNo !== false;
   const hasNoSeries = chartData.some((point) => point.p_no !== null && point.p_no !== undefined);
-  const noLineUnavailable = isYesNo === false || !hasNoSeries;
+  const noLineUnavailable = isYesNoMarket && !hasNoSeries;
+  const showNoLineToggle = isYesNoMarket;
+  const showWindowBand = windowMinutes === 60 && windowStartTs !== null && alertMarkerTs !== null;
+  const timeFormatter = new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+  const endTimeLabel =
+    historyMeta?.end_ts && !Number.isNaN(new Date(historyMeta.end_ts).getTime())
+      ? timeFormatter.format(new Date(historyMeta.end_ts))
+      : null;
+  const relativeRangeLabel =
+    historyRangeMinutes !== null
+      ? historyRangeMinutes >= 1440 && historyRangeMinutes % 1440 === 0
+        ? `last ${historyRangeMinutes / 1440}d`
+        : historyRangeMinutes >= 60 && historyRangeMinutes % 60 === 0
+          ? `last ${historyRangeMinutes / 60}h`
+          : `last ${historyRangeMinutes}m`
+      : null;
+  const rangeFooterText = relativeRangeLabel && endTimeLabel
+    ? `Range: ${relativeRangeLabel} ending at ${endTimeLabel}`
+    : "";
 
   const copyToClipboard = (text: string) => {
     if (navigator.clipboard?.writeText) {
@@ -233,6 +269,19 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
             <p className="mt-1 text-xs text-slate">{formatTimestamp(alertTimestamp)}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <MagicButton
+              variant="primary"
+              size="sm"
+              onClick={() => window.open(alert.market_url, "_blank", "noopener,noreferrer")}
+            >
+              Open market
+            </MagicButton>
+            <MagicButton variant="secondary" size="sm" onClick={() => copyToClipboard(alert.market_url)}>
+              Copy link
+            </MagicButton>
+            <MagicButton variant="secondary" size="sm" onClick={() => copyToClipboard(summary)}>
+              Copy summary
+            </MagicButton>
             <MagicButton variant="ghost" size="sm" onClick={onClose}>
               Close
             </MagicButton>
@@ -244,7 +293,12 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-xs uppercase text-slate">Probability History</p>
-                <p className="text-xs text-slate">{probabilityHistoryLabel} over time</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate">
+                  <span>{probabilityHeading}</span>
+                  <span className="rounded-full border border-slate/20 px-2 py-0.5 text-[10px] uppercase">
+                    {probability.label}
+                  </span>
+                </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-1 rounded-full border border-slate/20 bg-white px-1 py-1">
@@ -267,16 +321,18 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
                     );
                   })}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowNoLine((value) => !value)}
-                  aria-pressed={showNoLine}
-                  className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
-                    showNoLine ? "border-ink bg-ink text-white" : "border-slate/30 text-slate hover:text-ink"
-                  }`}
-                >
-                  NO line
-                </button>
+                {showNoLineToggle && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNoLine((value) => !value)}
+                    aria-pressed={showNoLine}
+                    className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
+                      showNoLine ? "border-ink bg-ink text-white" : "border-slate/30 text-slate hover:text-ink"
+                    }`}
+                  >
+                    NO line
+                  </button>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate">
@@ -284,12 +340,16 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
                 <span className="h-2 w-2 rounded-full bg-ink" />
                 {probabilityLegendLabel}
               </span>
-              <span className={`flex items-center gap-1 ${noLineUnavailable ? "opacity-40" : ""}`}>
-                <span className="h-2 w-2 rounded-full bg-slate-500" />
-                NO
-              </span>
-              {noLineUnavailable && (
-                <span>NO line available only for yes/no markets with stored p_no.</span>
+              {showNoLineToggle && (
+                <>
+                  <span className={`flex items-center gap-1 ${noLineUnavailable ? "opacity-40" : ""}`}>
+                    <span className="h-2 w-2 rounded-full bg-slate-500" />
+                    NO
+                  </span>
+                  {noLineUnavailable && (
+                    <span>NO line available only for yes/no markets with stored p_no.</span>
+                  )}
+                </>
               )}
             </div>
             <div className="rounded-2xl border border-white/70 bg-white/90 p-3 shadow-soft">
@@ -320,16 +380,27 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
                         labelFormatter={(label) => formatTimestamp(new Date(label).toISOString())}
                         contentStyle={{ borderRadius: "12px", borderColor: "#e2e8f0" }}
                       />
-                      {windowStartTs !== null && alertMarkerTs !== null && (
+                      {showWindowBand && (
                         <ReferenceArea
                           x1={windowStartTs}
                           x2={alertMarkerTs}
                           fill="#e2e8f0"
-                          fillOpacity={0.35}
+                          fillOpacity={0.2}
                         />
                       )}
                       {alertMarkerTs !== null && (
-                        <ReferenceLine x={alertMarkerTs} stroke="#111827" strokeDasharray="4 4" />
+                        <ReferenceLine
+                          x={alertMarkerTs}
+                          stroke="#111827"
+                          strokeDasharray="4 4"
+                          label={{
+                            value: "Alert triggered",
+                            position: "top",
+                            fill: "#64748b",
+                            fontSize: 10,
+                            offset: 6
+                          }}
+                        />
                       )}
                       <Line
                         type="monotone"
@@ -348,7 +419,7 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
                         strokeWidth={2}
                         dot={false}
                         isAnimationActive={false}
-                        hide={noLineUnavailable || !showNoLine}
+                        hide={!showNoLineToggle || noLineUnavailable || !showNoLine}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -359,8 +430,8 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
                   <p className="text-xs text-slate">This market has no stored snapshots for this range.</p>
                 </div>
               )}
-              {chartWindowLabel && (
-                <div className="mt-3 text-[11px] text-slate">Range: {chartWindowLabel}</div>
+              {rangeFooterText && (
+                <div className="mt-3 text-[11px] text-slate">{rangeFooterText}</div>
               )}
             </div>
             </div>
@@ -369,7 +440,13 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
               <p className="text-xs uppercase text-slate">Key metrics</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl bg-fog p-3">
-                  <p className="text-[11px] uppercase text-slate">Probability</p>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase text-slate">
+                    <span>Implied probability</span>
+                    <span className="rounded-full border border-slate/20 px-2 py-0.5 text-[10px] uppercase">
+                      {probability.label}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate">{probabilityHeading}</p>
                   <p className="mt-1 text-base font-semibold text-ink">
                     {isYesNoLabel ? formatPercent(alert.market_p_yes) : probability.compact}
                   </p>
@@ -404,9 +481,21 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
               <div className="mt-3 grid gap-2 text-xs text-slate">
                 <div>Market: {alert.market_slug || alert.market_id}</div>
                 <div>Theme: {alert.category || "n/a"}</div>
-                <div>Sustained snapshots: {alert.sustained ?? 0}</div>
-                <div>Reversal flag: {alert.reversal || "n/a"}</div>
+                <div>Data points: {alert.sustained ?? 0}</div>
               </div>
+              <details className="mt-3 rounded-xl bg-fog p-3 text-xs text-slate">
+                <summary className="cursor-pointer text-[11px] uppercase tracking-[0.2em] text-slate">
+                  Advanced
+                </summary>
+                <div className="mt-2 grid gap-1">
+                  <div>Alert ID: {alert.id ?? "n/a"}</div>
+                  <div>Market ID: {alert.market_id || "n/a"}</div>
+                  <div>Snapshot bucket: {formatTimestamp(alert.snapshot_bucket)}</div>
+                  <div>Triggered at: {formatTimestamp(alert.triggered_at)}</div>
+                  <div>Source ts: {formatTimestamp(alert.source_ts)}</div>
+                  <div>Reversal flag: {alert.reversal || "n/a"}</div>
+                </div>
+              </details>
             </div>
             <div className="rounded-2xl border border-white/70 bg-white/90 p-4 shadow-soft">
               <p className="text-xs uppercase text-slate">Tags</p>
