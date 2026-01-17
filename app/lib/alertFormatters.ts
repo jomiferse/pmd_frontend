@@ -21,18 +21,29 @@ function sanitizeOutcomeLabel(label: string | null | undefined) {
 }
 
 function resolveProbabilityLabel(alert: AlertItem) {
-  const explicit = alert.probability_label;
-  if (explicit && typeof explicit === "string") return explicit;
   const marketKind = alert.market_kind ?? null;
   const isYesNo = alert.is_yesno ?? null;
-  if (marketKind === "yesno" || isYesNo === true) return "p_yes";
+  const isYesNoMarket = marketKind === "yesno" || isYesNo === true;
   const mappingConfidence = alert.mapping_confidence ?? null;
-  if (mappingConfidence !== "verified") return "p_outcome0";
   const sanitized = sanitizeOutcomeLabel(alert.primary_outcome_label ?? null);
-  if (!sanitized) return "p_outcome0";
-  if ((sanitized === "OVER" || sanitized === "UNDER") && marketKind !== "ou") {
-    return "p_outcome0";
+  const isYesNoLabel = sanitized === "YES" || sanitized === "NO";
+  const isOuLabel = sanitized === "OVER" || sanitized === "UNDER";
+  const primaryEligible =
+    mappingConfidence === "verified" &&
+    sanitized &&
+    !isYesNoLabel &&
+    !(isOuLabel && marketKind !== "ou");
+
+  const explicit = alert.probability_label;
+  if (explicit && typeof explicit === "string") {
+    if (explicit === "p_yes" && !isYesNoMarket && primaryEligible) {
+      return `p_${sanitized}`;
+    }
+    return explicit;
   }
+
+  if (isYesNoMarket) return "p_yes";
+  if (!primaryEligible) return "p_outcome0";
   return `p_${sanitized}`;
 }
 

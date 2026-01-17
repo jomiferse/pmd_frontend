@@ -10,6 +10,7 @@ import MagicCard from "../../components/magicui/MagicCard";
 import MagicNotice from "../../components/magicui/MagicNotice";
 import MagicSkeleton from "../../components/magicui/MagicSkeleton";
 import { apiClient } from "../../lib/apiClient";
+import { formatProbability } from "../../lib/alertFormatters";
 import type { AlertItem, CopilotRun } from "../../lib/types";
 import type { SettingsResponse } from "../../lib/settings";
 import { useSession } from "../../lib/useSession";
@@ -1212,9 +1213,13 @@ export default function CopilotPage() {
                           const moveValue = item.delta_pct ?? item.move;
                           const moveLabel =
                             moveValue !== null && moveValue !== undefined ? `${moveValue.toFixed(2)}%` : null;
-                          const pYesLabel = formatPercent(item.market_p_yes);
-                          const liquidityLabel = formatCompactNumber(item.liquidity);
-                          const volumeLabel = formatCompactNumber(item.volume_24h);
+                            const probability = formatProbability(item);
+                            const probabilityBadge =
+                              probability.current === null || probability.current === undefined
+                                ? null
+                                : probability.compact;
+                            const liquidityLabel = formatCompactNumber(item.liquidity);
+                            const volumeLabel = formatCompactNumber(item.volume_24h);
                           const showPending = localState === "pending" && item.delivery_status !== "sent";
                           const rationaleToShow =
                             isCompact && !isExpanded ? rationaleLines.slice(0, 1) : rationaleLines;
@@ -1271,7 +1276,7 @@ export default function CopilotPage() {
 
                               <div className={`mt-3 flex flex-wrap gap-2 text-xs text-slate ${isCompact ? "" : "mt-4"}`}>
                                 {moveLabel && <MagicBadge>Move {moveLabel}</MagicBadge>}
-                                {pYesLabel && <MagicBadge>p_yes {pYesLabel}</MagicBadge>}
+                                  {probabilityBadge && <MagicBadge>{probabilityBadge}</MagicBadge>}
                                 {liquidityLabel && <MagicBadge>Liquidity {liquidityLabel}</MagicBadge>}
                                 {volumeLabel && <MagicBadge>Volume {volumeLabel}</MagicBadge>}
                               </div>
