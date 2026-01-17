@@ -24,7 +24,7 @@ export const plans: PlanDefinition[] = [
     entitlements: {
       digest_window: "60 min",
       max_themes: "3 themes",
-      strengths: "Low + medium",
+      strengths: "Medium",
       copilot: "Off",
       fast_mode: "Off"
     },
@@ -38,7 +38,7 @@ export const plans: PlanDefinition[] = [
     entitlements: {
       digest_window: "30 min",
       max_themes: "5 themes",
-      strengths: "Low + medium + high",
+      strengths: "Medium + strong",
       copilot: "On",
       fast_mode: "Watch"
     },
@@ -52,7 +52,7 @@ export const plans: PlanDefinition[] = [
     entitlements: {
       digest_window: "15 min",
       max_themes: "10 themes",
-      strengths: "All strengths",
+      strengths: "Medium + strong",
       copilot: "Always-on",
       fast_mode: "Full"
     },

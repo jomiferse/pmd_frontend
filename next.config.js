@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const marketingUrl = (process.env.NEXT_PUBLIC_MARKETING_URL || "https://pmd.com").replace(/\/$/, "");
+const marketingUrl = (process.env.NEXT_PUBLIC_MARKETING_URL || "https://pmdalerts.com").replace(/\/$/, "");
 
 const nextConfig = {
   reactStrictMode: true,

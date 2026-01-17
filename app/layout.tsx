@@ -12,7 +12,6 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   ...baseMetadata,
   manifest: "/favicons/site.webmanifest",
-  themeColor: "#eef2f6",
   icons: {
     icon: [
       { url: "/favicons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
@@ -29,6 +28,10 @@ export const metadata: Metadata = {
     "msapplication-config": "/favicons/browserconfig.xml",
     "msapplication-TileColor": "#eef2f6"
   }
+};
+
+export const viewport = {
+  themeColor: "#eef2f6"
 };
 
 export default function RootLayout({
