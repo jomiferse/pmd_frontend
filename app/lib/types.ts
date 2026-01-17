@@ -9,6 +9,13 @@ export type AlertItem = {
   delta_pct: number;
   market_p_yes: number;
   prev_market_p_yes: number;
+  probability_label?: string | null;
+  probability_prev?: number | null;
+  probability_curr?: number | null;
+  primary_outcome_label?: string | null;
+  mapping_confidence?: string | null;
+  is_yesno?: boolean | null;
+  market_kind?: string | null;
   old_price: number | null;
   new_price: number | null;
   liquidity: number;

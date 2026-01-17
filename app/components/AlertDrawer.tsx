@@ -16,6 +16,7 @@ import MagicButton from "./magicui/MagicButton";
 import MagicSkeleton from "./magicui/MagicSkeleton";
 import { apiClient } from "../lib/apiClient";
 import { formatNumber, formatPercent, formatTimestamp } from "../lib/formatters";
+import { formatProbability } from "../lib/alertFormatters";
 import type { AlertItem } from "../lib/types";
 
 type Props = {
@@ -162,18 +163,24 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
 
   if (!alert) return null;
 
+  const probability = formatProbability(alert);
+  const isYesNoLabel = probability.label === "p_yes";
+  const probabilityHistoryLabel = isYesNoLabel ? "p_yes" : probability.label;
+  const probabilityLegendLabel = isYesNoLabel ? "YES" : probability.label;
   const priceBefore = alert.old_price ?? alert.prev_market_p_yes;
   const action = alert.suggested_action || "n/a";
   const strengthLabel = alert.strength || alert.confidence || "n/a";
   const alertTimestamp = alert.snapshot_bucket || alert.triggered_at || alert.created_at;
 
+  const summaryProbability = isYesNoLabel
+    ? `p_yes ${formatPercent(alert.market_p_yes)}`
+    : probability.range;
+
   const summary = [
     `${alert.title}`,
     `Theme: ${alert.category || "n/a"}`,
     `Signal: ${alert.signal_type || "n/a"} (${strengthLabel})`,
-    `Move: ${formatPercent(alert.delta_pct ?? alert.move)} | p_yes ${formatPercent(
-      alert.market_p_yes
-    )}`,
+    `Move: ${formatPercent(alert.delta_pct ?? alert.move)} | ${summaryProbability}`,
     `Liquidity ${formatNumber(alert.liquidity)} | Vol 24h ${formatNumber(alert.volume_24h)}`,
     `Action: ${action}`,
     `Window: ${windowMinutes}m`,
@@ -237,7 +244,7 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="text-xs uppercase text-slate">Probability History</p>
-                <p className="text-xs text-slate">p_yes over time</p>
+                <p className="text-xs text-slate">{probabilityHistoryLabel} over time</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-1 rounded-full border border-slate/20 bg-white px-1 py-1">
@@ -275,7 +282,7 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
             <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate">
               <span className="flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full bg-ink" />
-                YES
+                {probabilityLegendLabel}
               </span>
               <span className={`flex items-center gap-1 ${noLineUnavailable ? "opacity-40" : ""}`}>
                 <span className="h-2 w-2 rounded-full bg-slate-500" />
@@ -327,7 +334,7 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
                       <Line
                         type="monotone"
                         dataKey="p_yes"
-                        name="YES"
+                        name={probabilityLegendLabel}
                         stroke="#111827"
                         strokeWidth={2}
                         dot={false}
@@ -364,10 +371,10 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
                 <div className="rounded-xl bg-fog p-3">
                   <p className="text-[11px] uppercase text-slate">Probability</p>
                   <p className="mt-1 text-base font-semibold text-ink">
-                    {formatPercent(alert.market_p_yes)}
+                    {isYesNoLabel ? formatPercent(alert.market_p_yes) : probability.compact}
                   </p>
                   <p className="mt-1 text-xs text-slate">
-                    Prev {formatPercent(priceBefore)}
+                    Prev {isYesNoLabel ? formatPercent(priceBefore) : probability.previousText ?? "n/a"}
                   </p>
                 </div>
                 <div className="rounded-xl bg-fog p-3">

@@ -11,6 +11,7 @@ import MagicInput from "../../components/magicui/MagicInput";
 import MagicNotice from "../../components/magicui/MagicNotice";
 import MagicSkeleton from "../../components/magicui/MagicSkeleton";
 import { apiClient } from "../../lib/apiClient";
+import { formatProbability } from "../../lib/alertFormatters";
 import { formatNumber, formatPercent, formatTimestamp } from "../../lib/formatters";
 import type { SettingsEntitlements } from "../../lib/settings";
 import type { AlertItem } from "../../lib/types";
@@ -1488,6 +1489,7 @@ function AlertsPageContent() {
 
                 const alert = row.alert;
                 const moveDelta = getMoveDelta(alert);
+                const probability = formatProbability(alert);
                 const moveClass = moveDelta >= 0 ? "text-emerald-600" : "text-rose-600";
                 const strengthLabel = alert.strength || alert.confidence || "n/a";
                 const alertStateKey = getAlertStateKey(alert);
@@ -1526,7 +1528,7 @@ function AlertsPageContent() {
                         )}
                       </div>
                       <div className={`flex flex-wrap items-center ${rowGap} ${statsTextClass}`}>
-                        <span className={pillClass}>p_yes {formatPercent(alert.market_p_yes)}</span>
+                        <span className={pillClass}>{probability.compact}</span>
                         <span className={`${pillClass} ${moveClass}`}>
                           Move {formatPercent(alert.delta_pct ?? alert.move)}
                         </span>
