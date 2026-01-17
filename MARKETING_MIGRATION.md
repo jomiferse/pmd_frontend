@@ -25,6 +25,16 @@ Dashboard (`pmd_frontend/.env`):
 - `/docs` -> `https://pmd.com/docs`
 - `/blog` -> `https://pmd.com/blog`
 
+## Redirect map (marketing -> app for legacy dashboard URLs)
+- `/login` -> `https://app.pmd.com/login`
+- `/register` -> `https://app.pmd.com/register`
+- `/app/*` -> `https://app.pmd.com/app/*`
+- `/alerts` -> `https://app.pmd.com/app/alerts`
+- `/copilot` -> `https://app.pmd.com/app/copilot`
+- `/telegram` -> `https://app.pmd.com/app/telegram`
+- `/billing` -> `https://app.pmd.com/app/billing`
+- `/settings` -> `https://app.pmd.com/app/settings`
+
 ## Deployment notes
 DNS:
 - `pmd.com` A/ALIAS -> marketing hosting
