@@ -42,7 +42,7 @@ function AlertsPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { data: session, loading: sessionLoading, error: sessionError } = useSession();
+  const { loading: sessionLoading, error: sessionError } = useSession();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [selected, setSelected] = useState<AlertItem | null>(null);
   const [loading, setLoading] = useState(false);
@@ -169,10 +169,8 @@ function AlertsPageContent() {
             include_total: includeTotal ? "1" : undefined,
             strength: strengthParam,
             category: categoryParam,
-            copilot: appliedServerFilters.copilot,
-            user_id: session?.user?.id ?? undefined
-          },
-          credentials: "include"
+            copilot: appliedServerFilters.copilot
+          }
         })
         .then((result) => {
           if (result.status === 401) {
@@ -240,7 +238,6 @@ function AlertsPageContent() {
       appliedServerFilters.copilot,
       appliedServerFilters.strengths,
       appliedServerFilters.themes,
-      session?.user?.id,
       router
     ]
   );

@@ -144,8 +144,7 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
 
     apiClient
       .get<HistoryPayload>(`/alerts/${alert.id}/history`, {
-        params: { range: historyRange },
-        credentials: "include"
+        params: { range: historyRange }
       })
       .then((result) => {
         if (!active) return;

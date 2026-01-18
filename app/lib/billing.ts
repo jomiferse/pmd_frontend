@@ -1,4 +1,4 @@
-import { API_BASE_URL, readJson } from "./api";
+import { apiClient } from "./apiClient";
 import type { PlanId } from "./plans";
 
 type BillingResponse = {
@@ -7,20 +7,11 @@ type BillingResponse = {
 };
 
 async function postBilling<T>(path: string, body: Record<string, unknown>) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(body)
-  });
-
-  const payload = ((await readJson<T>(response)) ?? {}) as T;
-  if (!response.ok) {
-    throw new Error((payload as { detail?: string })?.detail || "Billing request failed");
+  const result = await apiClient.post<T, Record<string, unknown>>(path, body);
+  if (!result.ok || !result.data) {
+    throw new Error(result.error || "Billing request failed");
   }
-  return payload;
+  return result.data;
 }
 
 export async function createCheckoutSession(planId: PlanId) {

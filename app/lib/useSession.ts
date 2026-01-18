@@ -14,7 +14,6 @@ export function useSession() {
     setLoading(true);
     apiClient
       .get<SessionResponse | { detail?: string }>("/me", {
-        credentials: "include",
         cache: "no-store"
       })
       .then((result) => {

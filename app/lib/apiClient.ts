@@ -1,6 +1,5 @@
-import { API_BASE_URL } from "./env";
 import { readJson } from "./api";
-import { fetchWithRetry } from "./retry";
+import { API_BASE_URL } from "./env";
 import type { SettingsEntitlements, SettingsPatch, SettingsResponse } from "./settings";
 
 type ApiResult<T> = {
@@ -15,12 +14,24 @@ type QueryParams = Record<string, string | number | undefined | null>;
 type ApiClientOptions = {
   params?: QueryParams;
   headers?: HeadersInit;
-  credentials?: RequestCredentials;
   cache?: RequestCache;
+  retry?: RetryOptions;
 };
 
 type SettingsUpdateResult = ApiResult<SettingsResponse> & {
   fieldErrors?: Record<string, string>;
+};
+
+type RetryOptions = {
+  retries?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+};
+
+const DEFAULT_RETRY: Required<RetryOptions> = {
+  retries: 2,
+  baseDelayMs: 300,
+  maxDelayMs: 2000
 };
 
 function buildQuery(params?: QueryParams) {
@@ -35,6 +46,68 @@ function buildQuery(params?: QueryParams) {
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
     .join("&");
   return `?${query}`;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function retryDelayMs(response: Response | null, attempt: number, options: Required<RetryOptions>) {
+  const retryAfter = response?.headers.get("Retry-After");
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds >= 0) {
+      return Math.min(seconds * 1000, options.maxDelayMs);
+    }
+    const date = new Date(retryAfter);
+    if (!Number.isNaN(date.getTime())) {
+      const delta = date.getTime() - Date.now();
+      if (delta > 0) {
+        return Math.min(delta, options.maxDelayMs);
+      }
+    }
+  }
+  const base = Math.min(options.baseDelayMs * 2 ** attempt, options.maxDelayMs);
+  const jitter = Math.floor(base * 0.2 * Math.random());
+  return base + jitter;
+}
+
+export async function fetchWithSession(
+  input: RequestInfo,
+  init: RequestInit = {},
+  retry: RetryOptions = {}
+) {
+  const options = { ...DEFAULT_RETRY, ...retry };
+  const method = (init.method || "GET").toUpperCase();
+  const allowRetry = method === "GET";
+  let attempt = 0;
+
+  while (true) {
+    try {
+      const response = await fetch(input, {
+        ...init,
+        credentials: "include",
+        cache: init.cache ?? "no-store"
+      });
+      if (
+        allowRetry &&
+        attempt < options.retries &&
+        (response.status === 429 || response.status >= 500)
+      ) {
+        await sleep(retryDelayMs(response, attempt, options));
+        attempt += 1;
+        continue;
+      }
+      return response;
+    } catch (error) {
+      if (allowRetry && attempt < options.retries) {
+        await sleep(retryDelayMs(null, attempt, options));
+        attempt += 1;
+        continue;
+      }
+      throw error;
+    }
+  }
 }
 
 async function handleResponse<T>(response: Response): Promise<ApiResult<T>> {
@@ -58,12 +131,15 @@ export const apiClient = {
   async get<T>(path: string, options: ApiClientOptions = {}): Promise<ApiResult<T>> {
     const url = `${API_BASE_URL}${path}${buildQuery(options.params)}`;
     try {
-      const response = await fetchWithRetry(url, {
-        method: "GET",
-        headers: options.headers,
-        credentials: options.credentials,
-        cache: options.cache ?? "no-store"
-      });
+      const response = await fetchWithSession(
+        url,
+        {
+          method: "GET",
+          headers: options.headers,
+          cache: options.cache
+        },
+        options.retry
+      );
       return await handleResponse<T>(response);
     } catch (error) {
       return { ok: false, data: null, error: "API unreachable", status: 0 };
@@ -76,14 +152,13 @@ export const apiClient = {
   ): Promise<ApiResult<T>> {
     const url = `${API_BASE_URL}${path}`;
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithSession(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(options.headers || {})
         },
-        credentials: options.credentials,
-        cache: options.cache ?? "no-store",
+        cache: options.cache,
         body: JSON.stringify(body)
       });
       return await handleResponse<T>(response);
@@ -92,20 +167,19 @@ export const apiClient = {
     }
   },
   async getSettings(): Promise<ApiResult<SettingsResponse>> {
-    return apiClient.get<SettingsResponse>("/settings/me", { credentials: "include" });
+    return apiClient.get<SettingsResponse>("/settings/me");
   },
   async getEntitlements(): Promise<ApiResult<SettingsEntitlements>> {
-    return apiClient.get<SettingsEntitlements>("/entitlements/me", { credentials: "include" });
+    return apiClient.get<SettingsEntitlements>("/entitlements/me");
   },
   async updateSettings(payload: SettingsPatch): Promise<SettingsUpdateResult> {
     const url = `${API_BASE_URL}/settings/me`;
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithSession(url, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json"
         },
-        credentials: "include",
         cache: "no-store",
         body: JSON.stringify(payload)
       });

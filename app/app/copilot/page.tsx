@@ -12,7 +12,6 @@ import MagicSkeleton from "../../components/magicui/MagicSkeleton";
 import { apiClient } from "../../lib/apiClient";
 import { formatProbability } from "../../lib/alertFormatters";
 import type { AlertItem, CopilotRun } from "../../lib/types";
-import type { SettingsResponse } from "../../lib/settings";
 import { useSession } from "../../lib/useSession";
 
 type AlertsPayload = {
@@ -184,12 +183,11 @@ function isActionableRecommendation(item: AlertItem) {
 
 export default function CopilotPage() {
   const router = useRouter();
-  const { data: session, loading: sessionLoading, error: sessionError } = useSession();
+  const { loading: sessionLoading, error: sessionError } = useSession();
   const [runs, setRuns] = useState<CopilotRun[]>([]);
   const [feedItems, setFeedItems] = useState<AlertItem[]>([]);
   const [summaryCounts, setSummaryCounts] = useState<SummaryCounts>({ sent: 0, skipped: 0 });
   const [loading, setLoading] = useState(false);
-  const [developerMode, setDeveloperMode] = useState(false);
   const [feedLoadingMore, setFeedLoadingMore] = useState(false);
   const [feedNextCursor, setFeedNextCursor] = useState<string | null>(null);
   const [feedTotalCount, setFeedTotalCount] = useState<number | null>(null);
@@ -237,20 +235,17 @@ export default function CopilotPage() {
       if (append) {
         setFeedLoadingMore(true);
       }
-      const userId = session?.user?.id ?? undefined;
       const statusParam = statusFilter === "all" ? undefined : statusFilter;
 
   const feedResult = await apiClient.get<AlertsPayload>("/copilot/recommendations", {
     params: {
       limit: FEED_PAGE_SIZE,
       window_minutes: windowMinutes,
-          user_id: userId,
-          cursor: cursor ?? undefined,
-          paginate: 1,
-          include_total: append ? undefined : 1,
-          copilot: statusParam
-        },
-        credentials: "include"
+      cursor: cursor ?? undefined,
+      paginate: 1,
+      include_total: append ? undefined : 1,
+      copilot: statusParam
+        }
       });
 
   if (feedResult.status === 401) {
@@ -270,18 +265,16 @@ export default function CopilotPage() {
     return;
   }
   if (!feedResult.ok && feedResult.status === 404) {
-    const legacyResult = await apiClient.get<AlertsPayload>("/alerts/latest", {
-      params: {
-        limit: FEED_PAGE_SIZE,
-        window_minutes: windowMinutes,
-        user_id: userId,
-        cursor: cursor ?? undefined,
-        paginate: 1,
-        include_total: append ? undefined : 1,
-        copilot: statusParam
-      },
-      credentials: "include"
-    });
+      const legacyResult = await apiClient.get<AlertsPayload>("/alerts/latest", {
+        params: {
+          limit: FEED_PAGE_SIZE,
+          window_minutes: windowMinutes,
+          cursor: cursor ?? undefined,
+          paginate: 1,
+          include_total: append ? undefined : 1,
+          copilot: statusParam
+        }
+      });
     if (legacyResult.status === 401) {
       router.replace("/login");
       setFeedLoadingMore(false);
@@ -331,7 +324,7 @@ export default function CopilotPage() {
       }
       setFeedLoadingMore(false);
     },
-    [sessionLoading, session?.user?.id, router, windowMinutes, statusFilter]
+    [sessionLoading, router, windowMinutes, statusFilter]
   );
 
   const fetchData = useCallback(async () => {
@@ -340,49 +333,40 @@ export default function CopilotPage() {
     }
     setLoading(true);
     setError(null);
-    const userId = session?.user?.id ?? undefined;
     const statusParam = statusFilter === "all" ? undefined : statusFilter;
 
     const [runsResult, feedResult, sentCountResult, skippedCountResult] = await Promise.all([
       apiClient.get<CopilotRun[]>("/copilot/runs", {
         params: {
-          limit: 50,
-          user_id: userId
-        },
-        credentials: "include"
+          limit: 50
+        }
       }),
       apiClient.get<AlertsPayload>("/copilot/recommendations", {
         params: {
           limit: FEED_PAGE_SIZE,
           window_minutes: windowMinutes,
-          user_id: userId,
           paginate: 1,
           include_total: 1,
           copilot: statusParam
-        },
-        credentials: "include"
+        }
       }),
       apiClient.get<AlertsPayload>("/copilot/recommendations", {
         params: {
           limit: 1,
           window_minutes: windowMinutes,
-          user_id: userId,
           paginate: 1,
           include_total: 1,
           copilot: "sent"
-        },
-        credentials: "include"
+        }
       }),
       apiClient.get<AlertsPayload>("/copilot/recommendations", {
         params: {
           limit: 1,
           window_minutes: windowMinutes,
-          user_id: userId,
           paginate: 1,
           include_total: 1,
           copilot: "skipped"
-        },
-        credentials: "include"
+        }
       })
     ]);
 
@@ -410,34 +394,28 @@ export default function CopilotPage() {
           params: {
             limit: FEED_PAGE_SIZE,
             window_minutes: windowMinutes,
-            user_id: userId,
             paginate: 1,
             include_total: 1,
             copilot: statusParam
-          },
-          credentials: "include"
+          }
         }),
         apiClient.get<AlertsPayload>("/alerts/latest", {
           params: {
             limit: 1,
             window_minutes: windowMinutes,
-            user_id: userId,
             paginate: 1,
             include_total: 1,
             copilot: "sent"
-          },
-          credentials: "include"
+          }
         }),
         apiClient.get<AlertsPayload>("/alerts/latest", {
           params: {
             limit: 1,
             window_minutes: windowMinutes,
-            user_id: userId,
             paginate: 1,
             include_total: 1,
             copilot: "skipped"
-          },
-          credentials: "include"
+          }
         })
       ]);
 
@@ -494,7 +472,7 @@ export default function CopilotPage() {
     setSummaryCounts({ sent: sentTotal, skipped: skippedTotal });
     setLoading(false);
     setLastUpdatedAt(new Date());
-  }, [sessionLoading, session?.user?.id, router, windowMinutes, statusFilter]);
+  }, [sessionLoading, router, windowMinutes, statusFilter]);
 
   useEffect(() => {
     fetchData();
@@ -539,32 +517,6 @@ export default function CopilotPage() {
     }, 30000);
     return () => window.clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (sessionLoading) {
-      return;
-    }
-    apiClient.get<SettingsResponse>("/settings/me", { credentials: "include" })
-      .then((result) => {
-        if (result.status === 401) {
-          router.replace("/login");
-          return;
-        }
-        if (!result.ok || !result.data) {
-          return;
-        }
-        setDeveloperMode(Boolean(result.data.user?.developer_mode));
-      });
-  }, [sessionLoading, router]);
-
-  useEffect(() => {
-    if (!developerMode) {
-      setView("feed");
-      setDebugOpen(false);
-      return;
-    }
-    setView("runs");
-  }, [developerMode]);
 
   const updateRecommendationState = useCallback(
     (key: string, nextState: RecommendationState) => {
@@ -905,24 +857,20 @@ export default function CopilotPage() {
             >
               Recommendations
             </MagicButton>
-            {developerMode && (
-              <>
-                <MagicButton
-                  variant={view === "runs" ? "primary" : "ghost"}
-                  size="sm"
-                  onClick={() => setView("runs")}
-                >
-                  Run summaries
-                </MagicButton>
-                <MagicButton
-                  variant={debugOpen ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setDebugOpen((value) => !value)}
-                >
-                  {debugOpen ? "Debug on" : "Debug off"}
-                </MagicButton>
-              </>
-            )}
+            <MagicButton
+              variant={view === "runs" ? "primary" : "ghost"}
+              size="sm"
+              onClick={() => setView("runs")}
+            >
+              Run summaries
+            </MagicButton>
+            <MagicButton
+              variant={debugOpen ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setDebugOpen((value) => !value)}
+            >
+              {debugOpen ? "Debug on" : "Debug off"}
+            </MagicButton>
           </div>
         </div>
 
@@ -932,14 +880,6 @@ export default function CopilotPage() {
             {error && <MagicNotice tone="error">{error}</MagicNotice>}
           </div>
         )}
-        {developerMode && (
-          <div className="mt-4">
-            <MagicNotice tone="info">
-              Developer mode enforces run summaries and keeps debug off.
-            </MagicNotice>
-          </div>
-        )}
-
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-2xl border border-white/70 bg-white/80 p-4">
             <p className="text-[10px] uppercase tracking-[0.2em] text-slate">Runs executed</p>
