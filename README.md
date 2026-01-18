@@ -1,39 +1,25 @@
-# PMD Frontend MVP
+# PMD Dashboard
 
-Minimal operational UI for PMD.
+## Overview
+Next.js dashboard for viewing alerts, Copilot runs, and billing for PMD users.
+It talks to the backend API defined by `NEXT_PUBLIC_API_BASE_URL`.
 
-## Local setup
-- Copy `.env.example` to `.env` and update values.
-- Install dependencies: `npm install`
-- Run dev server: `npm run dev`
+## Quickstart
+- Use the infra dev stack (recommended):
 
-## Favicons
-- Replace `public/logo.png` with the new source asset.
-- Regenerate assets with `npm run generate:favicons`.
+```bash
+cd ../pmd_infra
+cp env/dev.env.example .env
+./scripts/dev.sh
+```
 
-## Docker
-Docker compose lives in `pmd_infra`. From `pmd_infra`:
-- `cp env/dev.env.example .env`
-- `./scripts/dev.sh`
-- Open `http://localhost:3000`
+- Open `http://localhost:3000`.
 
-## Auth + billing
-- Login/register uses `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /me` on the API.
-- Subscription flows use Stripe via `POST /billing/checkout-session`, `POST /billing/portal-session`, and `POST /webhooks/stripe`.
-- PMD still supports API-key access for dashboard data; set the API key in the UI (stored in localStorage).
+## Configuration
+- Required public vars: NEXT_PUBLIC_API_BASE_URL, NEXT_PUBLIC_TELEGRAM_BOT_USERNAME.
+- See `../pmd_infra/env/dev.env.example` for values and notes.
 
-## Code structure
-- Shared formatting helpers live in `app/lib/formatters.ts`.
-- Alerts page utilities live in `app/app/alerts/alertUtils.ts`.
-
-### Stripe backend env vars (FastAPI)
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_BASIC_PRICE_ID`
-- `STRIPE_PRO_PRICE_ID`
-- `STRIPE_ELITE_PRICE_ID`
-- `APP_URL` (for success/cancel URLs and portal return URL)
-
-### Webhook setup
-- Configure the Stripe webhook endpoint to `POST /webhooks/stripe`.
-- Ensure idempotency and store `subscription.status`, `current_period_end`, and Stripe IDs.
+## Links
+- API base URL config: `../pmd_infra/env/dev.env.example`
+- Infra runbook: `../pmd_infra/README.md`
+- Pages: Alerts, Copilot, Settings, Billing, Telegram
