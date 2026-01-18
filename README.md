@@ -12,7 +12,9 @@ Minimal operational UI for PMD.
 - Regenerate assets with `npm run generate:favicons`.
 
 ## Docker
-- `docker compose up --build`
+Docker compose lives in `pmd_infra`. From `pmd_infra`:
+- `cp env/dev.env.example .env`
+- `./scripts/dev.sh`
 - Open `http://localhost:3000`
 
 ## Auth + billing
