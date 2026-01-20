@@ -1,6 +1,6 @@
 const marketingUrl = (process.env.NEXT_PUBLIC_MARKETING_URL || "https://pmdalerts.com").replace(/\/$/, "");
 
-export default function MagicFooter() {
+export default function Footer() {
   return (
     <footer className="border-t border-white/40 bg-white/80 py-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 text-xs text-slate sm:px-6">

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import EmptyState from "../../components/EmptyState";
-import MagicCard from "../../components/magicui/MagicCard";
-import MagicSkeleton from "../../components/magicui/MagicSkeleton";
+import Card from "../../components/ui/Card";
+import Skeleton from "../../components/ui/Skeleton";
 import { TELEGRAM_BOT_USERNAME } from "../../lib/env";
 import { useSession } from "../../lib/useSession";
 
@@ -20,8 +20,8 @@ export default function TelegramPage() {
   if (loading || !session?.user) {
     return (
       <div className="space-y-4">
-        <MagicSkeleton className="h-20 w-full" />
-        <MagicSkeleton className="h-48 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-48 w-full" />
       </div>
     );
   }
@@ -33,12 +33,12 @@ export default function TelegramPage() {
 
   return (
     <section className="space-y-4">
-      <MagicCard>
+      <Card>
         <h2 className="text-xl font-semibold">Telegram Linking</h2>
         <p className="text-sm text-slate">Connect your chat to receive Copilot updates.</p>
-      </MagicCard>
+      </Card>
 
-      <MagicCard>
+      <Card>
         <div className="flex items-center gap-3">
           <span
             className={`h-3 w-3 rounded-full ${linked ? "bg-accent" : "bg-warning"}`}
@@ -86,7 +86,7 @@ export default function TelegramPage() {
             Open the bot link above or send <code>/start pmd_&lt;your_user_id&gt;</code> in Telegram.
           </p>
         </div>
-      </MagicCard>
+      </Card>
     </section>
   );
 }

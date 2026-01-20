@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import MagicBadge from "../../components/magicui/MagicBadge";
-import MagicButton from "../../components/magicui/MagicButton";
-import MagicCard from "../../components/magicui/MagicCard";
-import MagicInput from "../../components/magicui/MagicInput";
-import MagicNotice from "../../components/magicui/MagicNotice";
+import Badge from "../../components/ui/Badge";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import Input from "../../components/ui/Input";
+import Notice from "../../components/ui/Notice";
 import { API_BASE_URL, readJson } from "../../lib/api";
 import { useSearchParam } from "../../lib/useSearchParam";
 
@@ -59,21 +59,21 @@ export default function RegisterPage() {
 
   return (
     <div className="mx-auto grid max-w-4xl gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-      <MagicCard>
+      <Card>
         <div className="space-y-2 text-center">
-          <MagicBadge>Start now</MagicBadge>
+          <Badge>Start now</Badge>
           <h1 className="text-2xl font-semibold text-ink">Create your PMD account</h1>
           <p className="text-sm text-slate">Create an account to unlock alerts and billing.</p>
         </div>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <MagicInput
+          <Input
             label="Email"
             type="email"
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
-          <MagicInput
+          <Input
             label="Password"
             type="password"
             required
@@ -81,16 +81,16 @@ export default function RegisterPage() {
             onChange={(event) => setPassword(event.target.value)}
           />
           {error && (
-            <MagicNotice tone="error">
+            <Notice tone="error">
               {error}
-            </MagicNotice>
+            </Notice>
           )}
-          <MagicButton type="submit" disabled={loading}>
+          <Button type="submit" disabled={loading}>
             {loading ? "Creating account..." : "Create account"}
-          </MagicButton>
+          </Button>
         </form>
-      </MagicCard>
-      <MagicCard className="flex h-full flex-col justify-between">
+      </Card>
+      <Card className="flex h-full flex-col justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-slate">What you get</p>
           <h2 className="mt-3 text-xl font-semibold text-ink">Signal ops in minutes</h2>
@@ -103,7 +103,7 @@ export default function RegisterPage() {
           <p className="rounded-full border border-slate/20 px-3 py-2">Copilot skip reasons</p>
           <p className="rounded-full border border-slate/20 px-3 py-2">Billing portal access</p>
         </div>
-      </MagicCard>
+      </Card>
     </div>
   );
 }

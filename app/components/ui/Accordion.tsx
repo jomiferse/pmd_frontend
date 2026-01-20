@@ -7,11 +7,11 @@ type AccordionItem = {
   content: string;
 };
 
-type MagicAccordionProps = {
+type AccordionProps = {
   items: AccordionItem[];
 };
 
-export default function MagicAccordion({ items }: MagicAccordionProps) {
+export default function Accordion({ items }: AccordionProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (

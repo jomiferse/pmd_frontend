@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-type MagicButtonProps = {
+type ButtonProps = {
   children: ReactNode;
   href?: string;
   onClick?: () => void;
@@ -11,7 +11,7 @@ type MagicButtonProps = {
   disabled?: boolean;
 };
 
-const variantStyles: Record<NonNullable<MagicButtonProps["variant"]>, string> = {
+const variantStyles: Record<NonNullable<ButtonProps["variant"]>, string> = {
   primary:
     "bg-ink text-white shadow-soft hover:-translate-y-0.5 hover:shadow-card",
   secondary:
@@ -20,13 +20,13 @@ const variantStyles: Record<NonNullable<MagicButtonProps["variant"]>, string> = 
     "border border-transparent bg-transparent text-ink hover:border-ink/20 hover:bg-white/60"
 };
 
-const sizeStyles: Record<NonNullable<MagicButtonProps["size"]>, string> = {
+const sizeStyles: Record<NonNullable<ButtonProps["size"]>, string> = {
   sm: "px-4 py-2 text-xs",
   md: "px-5 py-2.5 text-sm",
   lg: "px-6 py-3 text-base"
 };
 
-export default function MagicButton({
+export default function Button({
   children,
   href,
   onClick,
@@ -34,7 +34,7 @@ export default function MagicButton({
   size = "md",
   type = "button",
   disabled = false
-}: MagicButtonProps) {
+}: ButtonProps) {
   const className = `inline-flex items-center justify-center rounded-full font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 ${
     sizeStyles[size]
   } ${variantStyles[variant]} ${

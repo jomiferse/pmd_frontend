@@ -4,12 +4,12 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AlertDrawer from "../../components/AlertDrawer";
 import EmptyState from "../../components/EmptyState";
-import MagicBadge from "../../components/magicui/MagicBadge";
-import MagicButton from "../../components/magicui/MagicButton";
-import MagicCard from "../../components/magicui/MagicCard";
-import MagicInput from "../../components/magicui/MagicInput";
-import MagicNotice from "../../components/magicui/MagicNotice";
-import MagicSkeleton from "../../components/magicui/MagicSkeleton";
+import Badge from "../../components/ui/Badge";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import Input from "../../components/ui/Input";
+import Notice from "../../components/ui/Notice";
+import Skeleton from "../../components/ui/Skeleton";
 import { apiClient } from "../../lib/apiClient";
 import { formatProbability } from "../../lib/alertFormatters";
 import { formatNumber, formatPercent, formatTimestamp } from "../../lib/formatters";
@@ -87,6 +87,7 @@ function AlertsPageContent() {
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [showBackToTop, setShowBackToTop] = useState(false);
   const themeRef = useRef<HTMLDivElement | null>(null);
+  const matchesAlertFiltersRef = useRef<(alert: AlertItem) => boolean>(() => true);
   const [appliedServerFilters, setAppliedServerFilters] = useState(() => ({
     windowMinutes,
     strengths: strengths.slice(),
@@ -192,7 +193,7 @@ function AlertsPageContent() {
           const items = Array.isArray(data) ? data : data?.items ?? [];
           const next = Array.isArray(data) ? null : data?.next_cursor ?? null;
           const total = Array.isArray(data) ? null : data?.total ?? null;
-          const matchedNewItems = items.filter(matchesAlertFilters).length;
+          const matchedNewItems = items.filter(matchesAlertFiltersRef.current).length;
 
           setAlerts((current) => {
             if (!append) return items;
@@ -514,6 +515,7 @@ function AlertsPageContent() {
       themesSet
     ]
   );
+  matchesAlertFiltersRef.current = matchesAlertFilters;
 
   const filteredAlerts = useMemo(() => {
     const filtered = alerts.filter(matchesAlertFilters);
@@ -770,7 +772,7 @@ function AlertsPageContent() {
     | { type: "group"; id: string; label: string; count: number; stats: GroupStats; collapsed: boolean }
     | { type: "alert"; id: string; alert: AlertItem };
 
-  const buildGroupStats = (items: AlertItem[]): GroupStats => {
+  const buildGroupStats = useCallback((items: AlertItem[]): GroupStats => {
     let maxMove = 0;
     let liquiditySum = 0;
     let liquidityCount = 0;
@@ -787,7 +789,7 @@ function AlertsPageContent() {
       avgLiquidity: liquidityCount > 0 ? liquiditySum / liquidityCount : null,
       timeframeLabel
     };
-  };
+  }, [timeframeLabel]);
 
   const groupedBuckets = useMemo(() => {
     if (grouping === "none") return [] as GroupBucket[];
@@ -872,7 +874,7 @@ function AlertsPageContent() {
     return Array.from(groups.entries()).map(([groupKey, group]) =>
       makeBucket(`${grouping}:${groupKey}`, group.label, group.items)
     );
-  }, [filteredAlerts, grouping, timeframeLabel]);
+  }, [filteredAlerts, grouping, buildGroupStats]);
 
   useEffect(() => {
     if (grouping === "none" || groupedBuckets.length === 0) return;
@@ -1000,7 +1002,7 @@ function AlertsPageContent() {
   return (
     <section className="space-y-4">
       <div className="relative z-30">
-        <MagicCard className="relative border border-white/70 bg-white/80 p-3 backdrop-blur overflow-visible">
+        <Card className="relative border border-white/70 bg-white/80 p-3 backdrop-blur overflow-visible">
           <div className="space-y-4">
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
@@ -1067,21 +1069,21 @@ function AlertsPageContent() {
                 {serverFiltersDirty && <span className="text-warning">Unsaved changes</span>}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <MagicButton
+                <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowAdvanced((value) => !value)}
                 >
                   {showAdvanced ? "Hide advanced" : "Advanced"}
-                </MagicButton>
-                <MagicButton
+                </Button>
+                <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => bulkUpdateAlertState(filteredAlerts, "dismissed")}
                 >
                   Dismiss all on page
-                </MagicButton>
-                <MagicButton
+                </Button>
+                <Button
                   variant="secondary"
                   size="sm"
                   onClick={() =>
@@ -1089,23 +1091,23 @@ function AlertsPageContent() {
                   }
                 >
                   Save all actionable
-                </MagicButton>
-                <MagicButton
+                </Button>
+                <Button
                   variant="primary"
                   size="sm"
                   disabled={!serverFiltersDirty}
                   onClick={applyFilters}
                 >
                   Apply filters
-                </MagicButton>
-                <MagicButton variant="secondary" size="sm" onClick={clearFilters}>
+                </Button>
+                <Button variant="secondary" size="sm" onClick={clearFilters}>
                   Clear all
-                </MagicButton>
+                </Button>
               </div>
             </div>
             <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
               <div className="sm:col-span-2 lg:col-span-2">
-                <MagicInput
+                <Input
                   label="Search title, market, theme"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
@@ -1262,12 +1264,12 @@ function AlertsPageContent() {
         </div>
         {sessionError && (
           <div className="mt-4">
-            <MagicNotice tone="error">{sessionError}</MagicNotice>
+            <Notice tone="error">{sessionError}</Notice>
           </div>
         )}
         {settingsError && (
           <div className="mt-4">
-            <MagicNotice tone="warning">{settingsError}</MagicNotice>
+            <Notice tone="warning">{settingsError}</Notice>
           </div>
         )}
         <div className="mt-3 text-xs text-slate">
@@ -1275,14 +1277,14 @@ function AlertsPageContent() {
         </div>
         {error && (
           <div className="mt-4">
-            <MagicNotice tone="error">{error}</MagicNotice>
+            <Notice tone="error">{error}</Notice>
           </div>
         )}
-        </MagicCard>
+        </Card>
       </div>
 
       {showAdvanced && (
-        <MagicCard className="space-y-3 p-4">
+        <Card className="space-y-3 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold text-ink">Advanced filters</p>
             <div className="flex flex-wrap items-center gap-2" />
@@ -1425,25 +1427,25 @@ function AlertsPageContent() {
               </div>
             </div>
           </div>
-        </MagicCard>
+        </Card>
       )}
-      <MagicCard className="p-4">
+      <Card className="p-4">
         {error && (
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <MagicNotice tone="error">{error}</MagicNotice>
-            <MagicButton
+            <Notice tone="error">{error}</Notice>
+            <Button
               variant="secondary"
               size="sm"
               onClick={() => fetchAlertsPage({ cursor: null, append: false, includeTotal: true })}
             >
               Retry
-            </MagicButton>
+            </Button>
           </div>
         )}
         {loading && !loadingMore ? (
           <div className="space-y-3">
             {Array.from({ length: 6 }).map((_, index) => (
-              <MagicSkeleton key={index} className="h-20 w-full" />
+              <Skeleton key={index} className="h-20 w-full" />
             ))}
           </div>
         ) : filteredAlerts.length === 0 ? (
@@ -1509,10 +1511,10 @@ function AlertsPageContent() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-semibold text-ink">{alert.title}</span>
-                          {isFastAlert(alert) && <MagicBadge>FAST</MagicBadge>}
-                          {alert.signal_type && <MagicBadge>{alert.signal_type}</MagicBadge>}
-                          {localState === "saved" && <MagicBadge>Saved (local)</MagicBadge>}
-                          {localState === "dismissed" && <MagicBadge>Dismissed (local)</MagicBadge>}
+                          {isFastAlert(alert) && <Badge>FAST</Badge>}
+                          {alert.signal_type && <Badge>{alert.signal_type}</Badge>}
+                          {localState === "saved" && <Badge>Saved (local)</Badge>}
+                          {localState === "dismissed" && <Badge>Dismissed (local)</Badge>}
                         </div>
                         <div className={`mt-1 ${metaTextClass}`}>
                           {alert.category || "Uncategorized"} - {alert.market_slug || alert.market_id} - Window{" "}
@@ -1530,7 +1532,7 @@ function AlertsPageContent() {
                           Move {formatPercent(alert.delta_pct ?? alert.move)}
                         </span>
                         <span className={pillClass}>Liq {formatNumber(alert.liquidity)}</span>
-                        <MagicBadge>{strengthLabel}</MagicBadge>
+                        <Badge>{strengthLabel}</Badge>
                       </div>
                       <div className={`flex flex-wrap items-center ${rowGap}`}>
                         <button
@@ -1591,30 +1593,35 @@ function AlertsPageContent() {
             <div id="alerts-load-more-sentinel" className="h-1" />
           </div>
         )}
-      </MagicCard>
+      </Card>
 
-      <AlertDrawer alert={selected} windowMinutes={windowMinutes} onClose={() => setSelected(null)} />
+      <AlertDrawer
+        key={selected?.id ?? "none"}
+        alert={selected}
+        windowMinutes={windowMinutes}
+        onClose={() => setSelected(null)}
+      />
       {((canLoadMore && showLoadMore) || showBackToTop) && (
         <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2">
           <div className="flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-2 py-2 shadow-card backdrop-blur">
             {canLoadMore && showLoadMore && (
-              <MagicButton
+              <Button
                 variant="secondary"
                 size="sm"
                 onClick={handleLoadMore}
                 disabled={loadingMore}
               >
                 {loadingMore ? "Loading more..." : "Load more"}
-              </MagicButton>
+              </Button>
             )}
             {showBackToTop && (
-              <MagicButton
+              <Button
                 variant="primary"
                 size="sm"
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               >
                 Back to top
-              </MagicButton>
+              </Button>
             )}
           </div>
         </div>

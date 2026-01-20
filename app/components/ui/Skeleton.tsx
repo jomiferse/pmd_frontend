@@ -1,8 +1,8 @@
-type MagicSkeletonProps = {
+type SkeletonProps = {
   className?: string;
 };
 
-export default function MagicSkeleton({ className = "" }: MagicSkeletonProps) {
+export default function Skeleton({ className = "" }: SkeletonProps) {
   return (
     <div
       className={`relative overflow-hidden rounded-2xl bg-slate/10 ${className}`}

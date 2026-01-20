@@ -1,15 +1,14 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import AnimatedGradientText from "../components/magicui/AnimatedGradientText";
-import MagicButton from "../components/magicui/MagicButton";
-import MagicFooter from "../components/magicui/MagicFooter";
+import AnimatedGradientText from "../components/ui/AnimatedGradientText";
+import Button from "../components/ui/Button";
+import Footer from "../components/ui/Footer";
 
 const marketingUrl = (process.env.NEXT_PUBLIC_MARKETING_URL || "https://pmdalerts.com").replace(/\/$/, "");
+const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
 const navItems = [
   { href: `${marketingUrl}/pricing`, label: "Pricing" },
-  { href: `${marketingUrl}/faq`, label: "FAQ" },
-  { href: `${marketingUrl}/learn`, label: "Learn" },
-  { href: `${marketingUrl}/blog`, label: "Blog" }
+  { href: `${marketingUrl}/faq`, label: "FAQ" }
 ];
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
@@ -28,19 +27,19 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
                 </Link>
               ))}
             </div>
-            <MagicButton href="/login" variant="ghost" size="sm">
+            <Button href={`${appUrl}/login`} variant="ghost" size="sm">
               Login
-            </MagicButton>
-            <MagicButton href="/register" size="sm">
+            </Button>
+            <Button href={`${appUrl}/register`} size="sm">
               Get started
-            </MagicButton>
+            </Button>
           </nav>
         </div>
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-12 sm:px-6">
         {children}
       </main>
-      <MagicFooter />
+      <Footer />
     </div>
   );
 }

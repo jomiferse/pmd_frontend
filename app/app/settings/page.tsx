@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import MagicBadge from "../../components/magicui/MagicBadge";
-import MagicButton from "../../components/magicui/MagicButton";
-import MagicCard from "../../components/magicui/MagicCard";
-import MagicInput from "../../components/magicui/MagicInput";
-import MagicNotice from "../../components/magicui/MagicNotice";
-import MagicSkeleton from "../../components/magicui/MagicSkeleton";
+import Badge from "../../components/ui/Badge";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import Input from "../../components/ui/Input";
+import Notice from "../../components/ui/Notice";
+import Skeleton from "../../components/ui/Skeleton";
 import { apiClient } from "../../lib/apiClient";
 import type {
   EffectiveUserSettings,
@@ -33,7 +33,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
     Promise.all([apiClient.getSettings(), apiClient.getEntitlements()])
       .then(([settingsResult, entitlementsResult]) => {
         if (!mounted) return;
@@ -161,8 +160,8 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <MagicSkeleton className="h-24 w-full" />
-        <MagicSkeleton className="h-64 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
@@ -170,15 +169,15 @@ export default function SettingsPage() {
   if (!settings?.effective) {
     return (
       <section className="space-y-4">
-        <MagicNotice tone="error">Settings unavailable. Please refresh.</MagicNotice>
+        <Notice tone="error">Settings unavailable. Please refresh.</Notice>
       </section>
     );
   }
 
   return (
     <section className="space-y-4">
-      <MagicCard>
-        <MagicBadge>Settings</MagicBadge>
+      <Card>
+        <Badge>Settings</Badge>
         <h2 className="mt-3 text-2xl font-semibold text-ink">User settings</h2>
         <p className="mt-2 text-sm text-slate">
           Tune your alert filters, digest cadence, and FAST mode preferences.
@@ -189,21 +188,21 @@ export default function SettingsPage() {
           </span>
           <span>Settings reflect your plan entitlements and server-side defaults.</span>
         </div>
-      </MagicCard>
+      </Card>
 
       {error && (
-        <MagicNotice tone="error">{error}</MagicNotice>
+        <Notice tone="error">{error}</Notice>
       )}
       {success && (
-        <MagicNotice tone="success">{success}</MagicNotice>
+        <Notice tone="success">{success}</Notice>
       )}
       {entitlementsError && (
-        <MagicNotice tone="warning">{entitlementsError}. Settings are read-only.</MagicNotice>
+        <Notice tone="warning">{entitlementsError}. Settings are read-only.</Notice>
       )}
 
       {settings && (
         <>
-          <MagicCard>
+          <Card>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate">Alert Filters</p>
@@ -223,7 +222,7 @@ export default function SettingsPage() {
             </div>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <div>
-                <MagicInput
+                <Input
                   label={SETTINGS_FIELDS.min_liquidity.label}
                   type="number"
                   min={limits?.min_liquidity.min ?? 0}
@@ -239,7 +238,7 @@ export default function SettingsPage() {
                 )}
               </div>
               <div>
-                <MagicInput
+                <Input
                   label={SETTINGS_FIELDS.min_volume_24h.label}
                   type="number"
                   min={limits?.min_volume_24h.min ?? 0}
@@ -255,7 +254,7 @@ export default function SettingsPage() {
                 )}
               </div>
               <div>
-                <MagicInput
+                <Input
                   label={SETTINGS_FIELDS.min_abs_price_move.label}
                   type="number"
                   min={limits?.min_abs_price_move.min ?? 0}
@@ -274,7 +273,7 @@ export default function SettingsPage() {
               <div className="grid gap-2">
                 <span className="text-sm text-slate">Probability range (0-1)</span>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <MagicInput
+                  <Input
                     label={SETTINGS_FIELDS.p_min.label}
                     type="number"
                     min={limits?.p_min.min ?? 0}
@@ -284,7 +283,7 @@ export default function SettingsPage() {
                     onChange={(event) => handleNumberInput("p_min", event.target.value, limits?.p_min)}
                     disabled={!isEditable}
                   />
-                  <MagicInput
+                  <Input
                     label={SETTINGS_FIELDS.p_max.label}
                     type="number"
                     min={limits?.p_max.min ?? 0}
@@ -338,9 +337,9 @@ export default function SettingsPage() {
                 <p className="mt-2 text-xs text-danger">{getFieldError("alert_strengths")}</p>
               )}
             </div>
-          </MagicCard>
+          </Card>
 
-          <MagicCard>
+          <Card>
             <p className="text-xs uppercase tracking-[0.2em] text-slate">Digest & Limits</p>
             <p className="mt-2 text-lg font-semibold text-ink">Cadence and caps</p>
             <p className="mt-1 text-sm text-slate">
@@ -371,7 +370,7 @@ export default function SettingsPage() {
                 )}
               </label>
               <div>
-                <MagicInput
+                <Input
                   label={SETTINGS_FIELDS.max_alerts_per_digest.label}
                   type="number"
                   min={limits?.max_alerts_per_digest.min ?? 0}
@@ -388,7 +387,7 @@ export default function SettingsPage() {
                 )}
               </div>
               <div>
-                <MagicInput
+                <Input
                   label={SETTINGS_FIELDS.max_themes_per_digest.label}
                   type="number"
                   min={limits?.max_themes_per_digest.min ?? 0}
@@ -405,7 +404,7 @@ export default function SettingsPage() {
                 )}
               </div>
               <div>
-                <MagicInput
+                <Input
                   label={SETTINGS_FIELDS.max_markets_per_theme.label}
                   type="number"
                   min={limits?.max_markets_per_theme.min ?? 0}
@@ -422,9 +421,9 @@ export default function SettingsPage() {
                 )}
               </div>
             </div>
-          </MagicCard>
+          </Card>
 
-          <MagicCard>
+          <Card>
             <p className="text-xs uppercase tracking-[0.2em] text-slate">Copilot</p>
             <p className="mt-2 text-lg font-semibold text-ink">AI copilot access</p>
             <p className="mt-1 text-sm text-slate">
@@ -457,9 +456,9 @@ export default function SettingsPage() {
                 <p className="w-full text-xs text-danger">{getFieldError("copilot_enabled")}</p>
               )}
             </div>
-          </MagicCard>
+          </Card>
 
-          <MagicCard>
+          <Card>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate">FAST Mode</p>
@@ -496,7 +495,7 @@ export default function SettingsPage() {
                 </button>
               </label>
               <div>
-                <MagicInput
+                <Input
                   label={SETTINGS_FIELDS.fast_window_minutes.label}
                   type="number"
                   min={limits?.fast_window_minutes.min ?? 1}
@@ -512,7 +511,7 @@ export default function SettingsPage() {
                 )}
               </div>
               <div>
-                <MagicInput
+                <Input
                   label={SETTINGS_FIELDS.fast_max_themes_per_digest.label}
                   type="number"
                   min={limits?.fast_max_themes_per_digest.min ?? 0}
@@ -531,7 +530,7 @@ export default function SettingsPage() {
                 )}
               </div>
               <div>
-                <MagicInput
+                <Input
                   label={SETTINGS_FIELDS.fast_max_markets_per_theme.label}
                   type="number"
                   min={limits?.fast_max_markets_per_theme.min ?? 0}
@@ -553,9 +552,9 @@ export default function SettingsPage() {
             {getFieldError("fast_signals_enabled") && (
               <p className="mt-3 text-xs text-danger">{getFieldError("fast_signals_enabled")}</p>
             )}
-          </MagicCard>
+          </Card>
 
-          <MagicCard>
+          <Card>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate">Actions</p>
@@ -565,15 +564,15 @@ export default function SettingsPage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <MagicButton variant="secondary" onClick={onRestore} disabled={saving || !isEditable}>
+                <Button variant="secondary" onClick={onRestore} disabled={saving || !isEditable}>
                   Restore last saved
-                </MagicButton>
-                <MagicButton variant="secondary" onClick={onReset} disabled={saving || !isEditable}>
+                </Button>
+                <Button variant="secondary" onClick={onReset} disabled={saving || !isEditable}>
                   Reset to defaults
-                </MagicButton>
-                <MagicButton onClick={onSave} disabled={saving || hasValidationErrors || !hasChanges || !isEditable}>
+                </Button>
+                <Button onClick={onSave} disabled={saving || hasValidationErrors || !hasChanges || !isEditable}>
                   {saving ? "Saving..." : "Save changes"}
-                </MagicButton>
+                </Button>
               </div>
             </div>
             {hasValidationErrors && (
@@ -581,7 +580,7 @@ export default function SettingsPage() {
                 Fix validation errors before saving.
               </p>
             )}
-          </MagicCard>
+          </Card>
         </>
       )}
 

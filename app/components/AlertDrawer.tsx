@@ -11,9 +11,9 @@ import {
   XAxis,
   YAxis
 } from "recharts";
-import MagicBadge from "./magicui/MagicBadge";
-import MagicButton from "./magicui/MagicButton";
-import MagicSkeleton from "./magicui/MagicSkeleton";
+import Badge from "./ui/Badge";
+import Button from "./ui/Button";
+import Skeleton from "./ui/Skeleton";
 import { apiClient } from "../lib/apiClient";
 import { formatNumber, formatPercent, formatTimestamp } from "../lib/formatters";
 import { formatProbability } from "../lib/alertFormatters";
@@ -60,6 +60,25 @@ const historyRanges: { id: HistoryRange; label: string; minutes: number }[] = [
 
 const historyCache = new Map<string, HistoryPayload>();
 
+function getRangeAvailability(historyData: HistoryPayload | null, alertTimestampMs: number | null) {
+  if (!historyData?.meta || !alertTimestampMs) return null;
+  const minTsRaw = historyData.meta.min_ts;
+  if (!minTsRaw) return new Set<HistoryRange>();
+  const minTs = new Date(minTsRaw).getTime();
+  if (Number.isNaN(minTs)) return new Set<HistoryRange>();
+  const available = new Set<HistoryRange>();
+  historyRanges.forEach((range) => {
+    const startTs = alertTimestampMs - range.minutes * 60 * 1000;
+    if (minTs <= startTs) {
+      available.add(range.id);
+    }
+  });
+  if (available.size === 0) {
+    available.add("1h");
+  }
+  return available;
+}
+
 function formatOutcomeLabel(label: string | null | undefined) {
   if (!label) return null;
   const trimmed = label.trim();
@@ -77,19 +96,16 @@ function formatOutcomeLabel(label: string | null | undefined) {
 
 export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
   const [historyRange, setHistoryRange] = useState<HistoryRange>("24h");
-  const [historyData, setHistoryData] = useState<HistoryPayload | null>(null);
-  const [historyError, setHistoryError] = useState<string | null>(null);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyState, setHistoryState] = useState<{
+    key: string | null;
+    data: HistoryPayload | null;
+    error: string | null;
+  }>({
+    key: null,
+    data: null,
+    error: null
+  });
   const [showNoLine, setShowNoLine] = useState(false);
-
-  useEffect(() => {
-    if (!alert) return;
-    setHistoryRange("24h");
-    setHistoryData(null);
-    setHistoryError(null);
-    setHistoryLoading(false);
-    setShowNoLine(false);
-  }, [alert?.id]);
 
   const alertTimestampMs = useMemo(() => {
     if (!alert) return null;
@@ -99,73 +115,68 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
     return parsed;
   }, [alert]);
 
-  const rangeAvailability = useMemo(() => {
-    if (!historyData?.meta || !alertTimestampMs) return null;
-    const minTsRaw = historyData.meta.min_ts;
-    if (!minTsRaw) return new Set<HistoryRange>();
-    const minTs = new Date(minTsRaw).getTime();
-    if (Number.isNaN(minTs)) return new Set<HistoryRange>();
-    const available = new Set<HistoryRange>();
-    historyRanges.forEach((range) => {
-      const startTs = alertTimestampMs - range.minutes * 60 * 1000;
-      if (minTs <= startTs) {
-        available.add(range.id);
-      }
-    });
-    if (available.size === 0) {
-      available.add("1h");
-    }
-    return available;
-  }, [historyData?.meta, alertTimestampMs]);
+  const alertId = alert?.id ?? null;
+  const cacheKey = alertId !== null ? `${alertId}:${historyRange}` : null;
+  const cachedHistory = cacheKey ? historyCache.get(cacheKey) ?? null : null;
+  const isHistoryCurrent = historyState.key === cacheKey;
+  const historyData = cachedHistory ?? (isHistoryCurrent ? historyState.data : null);
+  const historyError = cachedHistory ? null : (isHistoryCurrent ? historyState.error : null);
+  const historyLoading = !cachedHistory && cacheKey !== null && !isHistoryCurrent;
+
+  const rangeAvailability = useMemo(
+    () => getRangeAvailability(historyData, alertTimestampMs),
+    [historyData, alertTimestampMs]
+  );
 
   useEffect(() => {
-    if (!rangeAvailability || rangeAvailability.size === 0) return;
-    if (rangeAvailability.has(historyRange)) return;
-    const fallback = historyRanges.find((range) => rangeAvailability.has(range.id));
-    if (fallback) {
-      setHistoryRange(fallback.id);
-    }
-  }, [historyRange, rangeAvailability]);
-
-  useEffect(() => {
-    if (!alert) return;
-    const cacheKey = `${alert.id}:${historyRange}`;
-    const cached = historyCache.get(cacheKey);
-    if (cached) {
-      setHistoryData(cached);
-      setHistoryError(null);
-      setHistoryLoading(false);
-      return;
-    }
+    if (alertId === null || !cacheKey) return;
+    if (cachedHistory) return;
 
     let active = true;
-    setHistoryLoading(true);
-    setHistoryError(null);
+    const requestedKey = cacheKey;
+    const requestedRange = historyRange;
 
     apiClient
-      .get<HistoryPayload>(`/alerts/${alert.id}/history`, {
-        params: { range: historyRange }
+      .get<HistoryPayload>(`/alerts/${alertId}/history`, {
+        params: { range: requestedRange }
       })
       .then((result) => {
         if (!active) return;
         if (!result.ok || !result.data) {
-          setHistoryError(result.error || "Failed to load history");
-          setHistoryData(null);
+          setHistoryState({
+            key: requestedKey,
+            data: null,
+            error: result.error || "Failed to load history"
+          });
           return;
         }
-        historyCache.set(cacheKey, result.data);
-        setHistoryData(result.data);
-      })
-      .finally(() => {
-        if (active) {
-          setHistoryLoading(false);
+        historyCache.set(requestedKey, result.data);
+        setHistoryState({
+          key: requestedKey,
+          data: result.data,
+          error: null
+        });
+        const available = getRangeAvailability(result.data, alertTimestampMs);
+        if (available && available.size > 0 && !available.has(requestedRange)) {
+          const fallback = historyRanges.find((range) => available.has(range.id));
+          if (fallback) {
+            setHistoryRange(fallback.id);
+          }
         }
+      })
+      .catch(() => {
+        if (!active) return;
+        setHistoryState({
+          key: requestedKey,
+          data: null,
+          error: "Failed to load history"
+        });
       });
 
     return () => {
       active = false;
     };
-  }, [alert, historyRange]);
+  }, [alertId, alertTimestampMs, cacheKey, cachedHistory, historyRange]);
 
   const chartData = (historyData?.points || [])
     .map((point) => {
@@ -268,9 +279,9 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
             <p className="mt-1 text-xs text-slate">{formatTimestamp(alertTimestamp)}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <MagicButton variant="ghost" size="sm" onClick={onClose}>
+            <Button variant="ghost" size="sm" onClick={onClose}>
               Close
-            </MagicButton>
+            </Button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-5 pb-6 pt-4">
@@ -340,7 +351,7 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
             </div>
             <div className="rounded-2xl border border-white/70 bg-white/90 p-3 shadow-soft">
               {historyLoading ? (
-                <MagicSkeleton className="h-48 w-full" />
+                <Skeleton className="h-48 w-full" />
               ) : historyError ? (
                 <div className="flex h-48 items-center justify-center text-sm text-rose-500">
                   {historyError}
@@ -486,11 +497,11 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
             <div className="rounded-2xl border border-white/70 bg-white/90 p-4 shadow-soft">
               <p className="text-xs uppercase text-slate">Tags</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                <MagicBadge>{alert.type}</MagicBadge>
-                {alert.category && <MagicBadge>{alert.category}</MagicBadge>}
-                {alert.signal_type && <MagicBadge>{alert.signal_type}</MagicBadge>}
-                {strengthLabel && <MagicBadge>{strengthLabel}</MagicBadge>}
-                {alert.delivery_status && <MagicBadge>{alert.delivery_status}</MagicBadge>}
+                <Badge>{alert.type}</Badge>
+                {alert.category && <Badge>{alert.category}</Badge>}
+                {alert.signal_type && <Badge>{alert.signal_type}</Badge>}
+                {strengthLabel && <Badge>{strengthLabel}</Badge>}
+                {alert.delivery_status && <Badge>{alert.delivery_status}</Badge>}
               </div>
             </div>
             <div className="rounded-2xl border border-white/70 bg-white/90 p-4 shadow-soft">
@@ -519,19 +530,19 @@ export default function AlertDrawer({ alert, windowMinutes, onClose }: Props) {
             <div className="rounded-2xl border border-white/70 bg-white/90 p-4 shadow-soft">
               <p className="text-xs uppercase text-slate">Actions</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <MagicButton
+                <Button
                   variant="primary"
                   size="sm"
                   onClick={() => window.open(alert.market_url, "_blank", "noopener,noreferrer")}
                 >
                   Open market
-                </MagicButton>
-                <MagicButton variant="secondary" size="sm" onClick={() => copyToClipboard(alert.market_url)}>
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => copyToClipboard(alert.market_url)}>
                   Copy link
-                </MagicButton>
-                <MagicButton variant="secondary" size="sm" onClick={() => copyToClipboard(summary)}>
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => copyToClipboard(summary)}>
                   Copy summary
-                </MagicButton>
+                </Button>
               </div>
             </div>
             </div>

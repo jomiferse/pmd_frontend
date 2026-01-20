@@ -4,11 +4,11 @@ import { useCallback, useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import EmptyState from "../../components/EmptyState";
-import MagicBadge from "../../components/magicui/MagicBadge";
-import MagicButton from "../../components/magicui/MagicButton";
-import MagicCard from "../../components/magicui/MagicCard";
-import MagicNotice from "../../components/magicui/MagicNotice";
-import MagicSkeleton from "../../components/magicui/MagicSkeleton";
+import Badge from "../../components/ui/Badge";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import Notice from "../../components/ui/Notice";
+import Skeleton from "../../components/ui/Skeleton";
 import { apiClient } from "../../lib/apiClient";
 import { formatProbability } from "../../lib/alertFormatters";
 import type { AlertItem, CopilotRun } from "../../lib/types";
@@ -200,7 +200,7 @@ export default function CopilotPage() {
   const [groupCollapsed, setGroupCollapsed] = useState<Record<string, boolean>>({});
   const [expandedRationales, setExpandedRationales] = useState<Record<string, boolean>>({});
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
-  const [nowTick, setNowTick] = useState(Date.now());
+  const [nowTick, setNowTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<"24h" | "7d" | "custom">("24h");
   const [customDays, setCustomDays] = useState(3);
@@ -475,20 +475,24 @@ export default function CopilotPage() {
   }, [sessionLoading, router, windowMinutes, statusFilter]);
 
   useEffect(() => {
-    fetchData();
+    Promise.resolve().then(() => {
+      fetchData();
+    });
   }, [fetchData]);
 
   useEffect(() => {
-    const prefs = loadFeedPreferences();
-    if (prefs?.density) {
-      setDensity(prefs.density);
-    }
-    if (prefs?.grouping) {
-      setGrouping(prefs.grouping);
-    }
-    if (prefs?.stateFilter) {
-      setStateFilter(prefs.stateFilter);
-    }
+    Promise.resolve().then(() => {
+      const prefs = loadFeedPreferences();
+      if (prefs?.density) {
+        setDensity(prefs.density);
+      }
+      if (prefs?.grouping) {
+        setGrouping(prefs.grouping);
+      }
+      if (prefs?.stateFilter) {
+        setStateFilter(prefs.stateFilter);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -500,8 +504,10 @@ export default function CopilotPage() {
   }, [density, grouping, stateFilter]);
 
   useEffect(() => {
-    setRecommendationState(loadRecommendationState());
-    setStateHydrated(true);
+    Promise.resolve().then(() => {
+      setRecommendationState(loadRecommendationState());
+      setStateHydrated(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -512,6 +518,9 @@ export default function CopilotPage() {
   }, [recommendationState, stateHydrated]);
 
   useEffect(() => {
+    Promise.resolve().then(() => {
+      setNowTick(Date.now());
+    });
     const interval = window.setInterval(() => {
       setNowTick(Date.now());
     }, 30000);
@@ -604,12 +613,12 @@ export default function CopilotPage() {
   }, [feedItems, statusFilter, actionFilter, actionableOnly, stateFilter, recommendationState]);
 
   const runsInRange = useMemo(() => {
-    const cutoff = Date.now() - windowMinutes * 60 * 1000;
+    const cutoff = nowTick - windowMinutes * 60 * 1000;
     return runs.filter((run) => {
       const createdAt = run.created_at ? new Date(run.created_at).getTime() : 0;
       return createdAt >= cutoff;
     });
-  }, [runs, windowMinutes]);
+  }, [runs, windowMinutes, nowTick]);
 
   const filteredRuns = useMemo(() => {
     if (modeFilter === "all") {
@@ -753,7 +762,7 @@ export default function CopilotPage() {
     const windowMinutesValue =
       run.window_minutes || run.digest_window_minutes || (run as unknown as { window?: number }).window || 0;
     return (
-      <MagicCard key={run.run_id} className="border border-white/70 bg-fog/70">
+      <Card key={run.run_id} className="border border-white/70 bg-fog/70">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-slate">Run</p>
@@ -834,13 +843,13 @@ export default function CopilotPage() {
             </pre>
           </details>
         )}
-      </MagicCard>
+      </Card>
     );
   });
 
   return (
     <section className="space-y-6">
-      <MagicCard>
+      <Card>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-slate">{summaryRangeLabel}</p>
@@ -850,34 +859,34 @@ export default function CopilotPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <MagicButton
+            <Button
               variant={view === "feed" ? "primary" : "ghost"}
               size="sm"
               onClick={() => setView("feed")}
             >
               Recommendations
-            </MagicButton>
-            <MagicButton
+            </Button>
+            <Button
               variant={view === "runs" ? "primary" : "ghost"}
               size="sm"
               onClick={() => setView("runs")}
             >
               Run summaries
-            </MagicButton>
-            <MagicButton
+            </Button>
+            <Button
               variant={debugOpen ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setDebugOpen((value) => !value)}
             >
               {debugOpen ? "Debug on" : "Debug off"}
-            </MagicButton>
+            </Button>
           </div>
         </div>
 
         {(sessionError || error) && (
           <div className="mt-4 space-y-2">
-            {sessionError && <MagicNotice tone="error">{sessionError}</MagicNotice>}
-            {error && <MagicNotice tone="error">{error}</MagicNotice>}
+            {sessionError && <Notice tone="error">{sessionError}</Notice>}
+            {error && <Notice tone="error">{error}</Notice>}
           </div>
         )}
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -899,17 +908,17 @@ export default function CopilotPage() {
             <p className="mt-1 text-xs text-slate">{topSkipReason}</p>
           </div>
         </div>
-      </MagicCard>
+      </Card>
 
-      <MagicCard>
+      <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-slate">
             Last updated: <span className="font-semibold text-ink">{formatTimeAgo(lastUpdatedAt, nowTick)}</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <MagicButton variant="secondary" size="sm" onClick={() => fetchData()} disabled={loading}>
+            <Button variant="secondary" size="sm" onClick={() => fetchData()} disabled={loading}>
               {loading ? "Refreshing..." : "Refresh"}
-            </MagicButton>
+            </Button>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -1089,16 +1098,16 @@ export default function CopilotPage() {
         <p className="mt-1 text-xs text-slate">
           Saved and dismissed states are stored locally on this device.
         </p>
-      </MagicCard>
+      </Card>
 
       {loading ? (
-        <MagicCard>
+        <Card>
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, index) => (
-              <MagicSkeleton key={index} className="h-24 w-full" />
+              <Skeleton key={index} className="h-24 w-full" />
             ))}
           </div>
-        </MagicCard>
+        </Card>
       ) : view === "feed" ? (
         filteredFeed.length === 0 ? (
           <EmptyState
@@ -1164,7 +1173,7 @@ export default function CopilotPage() {
                           const rationaleToShow =
                             isCompact && !isExpanded ? rationaleLines.slice(0, 1) : rationaleLines;
                           return (
-                              <MagicCard
+                              <Card
                                 className={`border border-white/70 bg-fog/70 ${isCompact ? "p-4" : "p-6"}`}
                               >
                               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1215,10 +1224,10 @@ export default function CopilotPage() {
                               </div>
 
                               <div className={`mt-3 flex flex-wrap gap-2 text-xs text-slate ${isCompact ? "" : "mt-4"}`}>
-                                {moveLabel && <MagicBadge>Move {moveLabel}</MagicBadge>}
-                                  {probabilityBadge && <MagicBadge>{probabilityBadge}</MagicBadge>}
-                                {liquidityLabel && <MagicBadge>Liquidity {liquidityLabel}</MagicBadge>}
-                                {volumeLabel && <MagicBadge>Volume {volumeLabel}</MagicBadge>}
+                                {moveLabel && <Badge>Move {moveLabel}</Badge>}
+                                  {probabilityBadge && <Badge>{probabilityBadge}</Badge>}
+                                {liquidityLabel && <Badge>Liquidity {liquidityLabel}</Badge>}
+                                {volumeLabel && <Badge>Volume {volumeLabel}</Badge>}
                               </div>
 
                               <div className={isCompact ? "mt-3" : "mt-4"}>
@@ -1300,7 +1309,7 @@ export default function CopilotPage() {
                                   </div>
                                 </details>
                               )}
-                            </MagicCard>
+                            </Card>
                           );
                         })()
                       )}
@@ -1320,12 +1329,12 @@ export default function CopilotPage() {
 
       {view === "feed" && debugOpen && (
         <section className="space-y-3">
-          <MagicCard>
+          <Card>
             <h3 className="text-base font-semibold text-ink">Run diagnostics</h3>
             <p className="text-sm text-slate">
               Detailed run IDs, caps, skip reasons, and raw payloads for troubleshooting.
             </p>
-          </MagicCard>
+          </Card>
           {filteredRuns.length === 0 ? (
             <EmptyState title="No runs in this range" detail="Adjust the date range to see run details." />
           ) : (
@@ -1335,27 +1344,27 @@ export default function CopilotPage() {
       )}
 
       {!loading && error && (
-        <MagicCard>
-          <MagicNotice tone="error">{error}</MagicNotice>
+        <Card>
+          <Notice tone="error">{error}</Notice>
           <div className="mt-4">
-            <MagicButton variant="secondary" size="sm" onClick={() => fetchData()}>
+            <Button variant="secondary" size="sm" onClick={() => fetchData()}>
               Retry
-            </MagicButton>
+            </Button>
           </div>
-        </MagicCard>
+        </Card>
       )}
 
       {view === "feed" && canLoadMoreFeed && showLoadMoreFeed && (
         <div className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2">
           <div className="flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-2 py-2 shadow-card backdrop-blur">
-            <MagicButton
+            <Button
               variant="secondary"
               size="sm"
               onClick={handleLoadMoreFeed}
               disabled={feedLoadingMore}
             >
               {feedLoadingMore ? "Loading more..." : "Load more"}
-            </MagicButton>
+            </Button>
           </div>
         </div>
       )}

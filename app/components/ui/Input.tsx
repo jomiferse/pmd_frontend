@@ -1,10 +1,10 @@
 import type { InputHTMLAttributes, ReactNode } from "react";
 
-type MagicInputProps = InputHTMLAttributes<HTMLInputElement> & {
+type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   label: ReactNode;
 };
 
-export default function MagicInput({ label, className = "", ...props }: MagicInputProps) {
+export default function Input({ label, className = "", ...props }: InputProps) {
   return (
     <label className="block text-sm text-slate">
       {label}

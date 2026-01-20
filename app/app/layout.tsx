@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import AppGuard from "../components/AppGuard";
-import MagicBadge from "../components/magicui/MagicBadge";
-import MagicCard from "../components/magicui/MagicCard";
-import Spotlight from "../components/magicui/Spotlight";
+import Badge from "../components/ui/Badge";
+import Card from "../components/ui/Card";
+import Spotlight from "../components/ui/Spotlight";
 
 const navItems = [
   { href: "/app/alerts", label: "Alerts" },
@@ -17,12 +17,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <AppGuard>
       <div className="mx-auto min-h-screen max-w-6xl px-4 pb-12 pt-8 sm:px-6">
-        <MagicCard className="relative overflow-hidden">
+        <Card className="relative overflow-hidden">
           <Spotlight className="-left-20 -top-20 opacity-60" size={300} />
           <div className="relative z-10 flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <MagicBadge>PMD Ops</MagicBadge>
+                <Badge>PMD Ops</Badge>
                 <h1 className="mt-3 text-2xl font-semibold">Operational Control</h1>
                 <p className="mt-2 text-sm text-slate">
                   Monitor alerts, Copilot runs, and billing in one secure cockpit.
@@ -41,7 +41,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               ))}
             </nav>
           </div>
-        </MagicCard>
+        </Card>
         <main className="mt-8">{children}</main>
       </div>
     </AppGuard>

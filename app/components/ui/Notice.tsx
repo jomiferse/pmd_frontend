@@ -9,13 +9,13 @@ const toneStyles: Record<NoticeTone, string> = {
   success: "border-accent/40 bg-accent/20 text-ink"
 };
 
-type MagicNoticeProps = {
+type NoticeProps = {
   children: ReactNode;
   tone?: NoticeTone;
   className?: string;
 };
 
-export default function MagicNotice({ children, tone = "info", className = "" }: MagicNoticeProps) {
+export default function Notice({ children, tone = "info", className = "" }: NoticeProps) {
   return (
     <div className={`rounded-2xl border px-4 py-2 text-xs ${toneStyles[tone]} ${className}`}>
       {children}

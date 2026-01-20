@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useSearchParam } from "../../lib/useSearchParam";
-import MagicBadge from "../../components/magicui/MagicBadge";
-import MagicButton from "../../components/magicui/MagicButton";
-import MagicCard from "../../components/magicui/MagicCard";
-import MagicNotice from "../../components/magicui/MagicNotice";
-import MagicSkeleton from "../../components/magicui/MagicSkeleton";
+import Badge from "../../components/ui/Badge";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import Notice from "../../components/ui/Notice";
+import Skeleton from "../../components/ui/Skeleton";
 import { createCheckoutSession, createPortalSession } from "../../lib/billing";
 import { plans } from "../../lib/plans";
 import { hasActiveSubscription } from "../../lib/session";
@@ -88,10 +88,10 @@ export default function BillingPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <MagicSkeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
         <div className="grid gap-4 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
-            <MagicSkeleton key={index} className="h-64 w-full" />
+            <Skeleton key={index} className="h-64 w-full" />
           ))}
         </div>
       </div>
@@ -117,38 +117,38 @@ export default function BillingPage() {
   return (
     <section className="space-y-6">
       {sessionError && (
-        <MagicNotice tone="error">Session error: {sessionError}</MagicNotice>
+        <Notice tone="error">Session error: {sessionError}</Notice>
       )}
       {showPaymentFix && (
-        <MagicNotice tone="warning">
+        <Notice tone="warning">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span>Payment needs attention. Update your payment method to restore service.</span>
-            <MagicButton
+            <Button
               size="sm"
               variant="secondary"
               onClick={openPortal}
               disabled={processing === "portal"}
             >
               {processing === "portal" ? "Opening portal..." : "Fix payment"}
-            </MagicButton>
+            </Button>
           </div>
-        </MagicNotice>
+        </Notice>
       )}
-      <MagicCard>
+      <Card>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <MagicBadge>Billing</MagicBadge>
+            <Badge>Billing</Badge>
             <h2 className="mt-3 text-2xl font-semibold text-ink">Subscription status</h2>
             <p className="mt-2 text-sm text-slate">{statusMessage}</p>
           </div>
           {active && (
-            <MagicButton
+            <Button
               variant="secondary"
               onClick={openPortal}
               disabled={processing === "portal"}
             >
               {processing === "portal" ? "Opening portal..." : "Manage subscription"}
-            </MagicButton>
+            </Button>
           )}
         </div>
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -169,21 +169,21 @@ export default function BillingPage() {
         </div>
         {active && !formattedPeriodEnd && (
           <div className="mt-4">
-            <MagicNotice tone="warning">
+            <Notice tone="warning">
               Renewal date is not available yet. If this persists, refresh or contact support.
-            </MagicNotice>
+            </Notice>
           </div>
         )}
         {error && (
           <div className="mt-4">
-            <MagicNotice tone="error">{error}</MagicNotice>
+            <Notice tone="error">{error}</Notice>
           </div>
         )}
-      </MagicCard>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-3">
         {plans.map((plan) => (
-          <MagicCard key={plan.id} className={planIntent === plan.id ? "border border-accent/70" : ""}>
+          <Card key={plan.id} className={planIntent === plan.id ? "border border-accent/70" : ""}>
             <p className="text-xs uppercase tracking-[0.2em] text-slate">{plan.name}</p>
             <p className="mt-2 text-2xl font-semibold text-ink">{plan.price}</p>
             <p className="mt-2 text-sm text-slate">{plan.description}</p>
@@ -209,16 +209,16 @@ export default function BillingPage() {
                         ? "Switch plan"
                         : "Subscribe";
                 return (
-                  <MagicButton
+                  <Button
                     onClick={() => handlePlanAction(plan.id)}
                     disabled={Boolean(processing) || isCurrentPlan}
                   >
                     {label}
-                  </MagicButton>
+                  </Button>
                 );
               })()}
             </div>
-          </MagicCard>
+          </Card>
         ))}
       </div>
     </section>

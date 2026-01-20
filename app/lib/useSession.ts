@@ -11,7 +11,6 @@ export function useSession() {
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
     apiClient
       .get<SessionResponse | { detail?: string }>("/me", {
         cache: "no-store"
